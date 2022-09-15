@@ -1,0 +1,7 @@
+font.size: 18
+font.sans-serif: Fira Sans Condensed
+figure.autolayout: True
+xtick.bottom: True
+xtick.direction: in
+ytick.direction: in
+text.usetex: True

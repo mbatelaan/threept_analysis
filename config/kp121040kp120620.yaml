@@ -1,0 +1,11 @@
+kappal: 0.121040
+kappas: 0.120620
+beta: 5.50
+csw: 2.65
+L: 32
+T: 64
+a: 0.074
+src_smearing : 'sh_gij_p21_30'
+snk_smearing : 'sh_gij_p21_30'
+nboot : 500
+nbin : 1
