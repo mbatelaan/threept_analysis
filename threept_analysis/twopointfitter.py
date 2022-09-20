@@ -37,24 +37,27 @@ _colors = [
 _fmts = ["s", "^", "o", ".", "p", "v", "P", ",", "*"]
 
 
-def fit_2ptfn(evxptdir, plotdir, datadir):
+def fit_2ptfn(evxptdir, plotdir, datadir, rel="rel"):
     """Read the two-point function and fit a two-exponential function to it over a range of fit windows, then save the fit data to pickle files."""
 
     kappa_combs = [
         "kp121040kp121040",
         "kp121040kp120620",
-        "kp120620kp121040",
-        "kp120620kp120620",
+        # "kp120620kp121040",
+        # "kp120620kp120620",
     ]
     momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
     twoexp_fitfunc = fitfunc.initffncs("Twoexp")
-    time_limits = [[1, 12], [15, 25]]
+    # time_limits = [[1, 10], [15, 25]]
+    time_limits = [[1, 3], [15, 19]]
     # time_limits = [[1, 1], [24, 24]]
 
     for ikappa, kappa in enumerate(kappa_combs):
+        print(f"\n{kappa}")
         for imom, mom in enumerate(momenta):
+            print(f"\n{mom}")
             twopointfn_filename = evxptdir / Path(
-                f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/{kappa}/sh_gij_p21_90-sh_gij_p21_90/{mom}/barspec_nucleon_rel_500cfgs.pickle"
+                f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/{kappa}/sh_gij_p21_90-sh_gij_p21_90/{mom}/barspec_nucleon_{rel}_500cfgs.pickle"
             )
             twopoint_fn = read_pickle(twopointfn_filename, nboot=500, nbin=1)
 
@@ -77,7 +80,7 @@ def fit_2ptfn(evxptdir, plotdir, datadir):
                 weights_=True,
             )
 
-            datafile = datadir / Path(f"{kappa}_{mom}_fitlist_2pt.pkl")
+            datafile = datadir / Path(f"{kappa}_{mom}_{rel}_fitlist_2pt.pkl")
             with open(datafile, "wb") as file_out:
                 pickle.dump(fitlist_2pt, file_out)
     return
@@ -104,7 +107,8 @@ def main():
 
     # ======================================================================
     # Read the two-point functions and fit a two-exponential function to it
-    fit_2ptfn(evxptdir, plotdir, datadir)
+    fit_2ptfn(evxptdir, plotdir, datadir, rel="nr")
+    # fit_2ptfn(evxptdir, plotdir, datadir)
 
 
 if __name__ == "__main__":

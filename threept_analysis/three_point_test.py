@@ -46,9 +46,9 @@ def threeptBS(X, B):
     )
 
 
-# def twoexp(x, p):
-#     """two exponential function"""
-#     return p[0] * np.exp(-x * p[1]) + p[2] * np.exp(-x * p[3])
+def twoexp(x, p):
+    """two exponential function"""
+    return p[0] * np.exp(-x * p[1]) + p[2] * np.exp(-x * p[3])
 
 
 def fit_3ptfn_2exp(
@@ -67,16 +67,13 @@ def fit_3ptfn_2exp(
 
     chisq_tol = 0.01
     fitweights_n = np.array([fit["weight"] for fit in fit_data_list[0]])
+    # print(f"{fitweights_n=}")
+    # print(np.where(fitweights_n > chisq_tol, fitweights_n, 0))
     fitweights_n = np.where(fitweights_n > chisq_tol, fitweights_n, 0)
     fitweights_n = fitweights_n / sum(fitweights_n)
     fitparams_n = np.array([fit["param"] for fit in fit_data_list[0]])
     best_fit_n = fit_data_list[0][np.argmax(fitweights_n)]
     weighted_fit_n = np.einsum("i,ijk->jk", fitweights_n, fitparams_n)
-    # print(f"{fitweights_n=}")
-    # print(np.where(fitweights_n > chisq_tol, fitweights_n, 0))
-    # print(f"{best_fit_n['x']=}")
-    print(f"{best_fit_n['paramavg'][1]=}")
-    # print(f"{[i for i in best_fit_n]=}")
     # print(f"{np.average(best_fit_n['param'],axis=0)=}")
     # print(f"{np.average(weighted_fit_n,axis=0)=}")
 
@@ -88,7 +85,6 @@ def fit_3ptfn_2exp(
     fitparams_s = np.array([fit["param"] for fit in fit_data_list[1]])
     best_fit_s = fit_data_list[1][np.argmax(fitweights_s)]
     weighted_fit_s = np.einsum("i,ijk->jk", fitweights_s, fitparams_s)
-    print(f"{best_fit_s['paramavg'][1]=}")
 
     # Set the parameters from the twoptfn
     A_E0i = weighted_fit_n[:, 0]
@@ -103,29 +99,30 @@ def fit_3ptfn_2exp(
     # Create the fit data
     fitdata = np.concatenate(
         (
-            threeptfn_list[0][:, delta_t : src_snk_times[0] + 1 - delta_t, ireim],
-            threeptfn_list[1][:, delta_t : src_snk_times[1] + 1 - delta_t, ireim],
-            threeptfn_list[2][:, delta_t : src_snk_times[2] + 1 - delta_t, ireim],
+            threeptfn_list[0][:, delta_t : src_snk_times[0] - delta_t, ireim],
+            threeptfn_list[1][:, delta_t : src_snk_times[1] - delta_t, ireim],
+            threeptfn_list[2][:, delta_t : src_snk_times[2] - delta_t, ireim],
         ),
         axis=1,
     )
-    # print(f"{np.shape(fitdata)=}")
+    print(f"{np.shape(fitdata)=}")
     t_values = np.concatenate(
         (
-            [src_snk_times[0]] * (src_snk_times[0] + 1 - 2 * delta_t),
-            [src_snk_times[1]] * (src_snk_times[1] + 1 - 2 * delta_t),
-            [src_snk_times[2]] * (src_snk_times[2] + 1 - 2 * delta_t),
+            [src_snk_times[0]] * (src_snk_times[0] - 2 * delta_t),
+            [src_snk_times[1]] * (src_snk_times[1] - 2 * delta_t),
+            [src_snk_times[2]] * (src_snk_times[2] - 2 * delta_t),
         )
     )
     tau_values = np.concatenate(
         (
-            np.arange(src_snk_times[0] + 1)[delta_t:-delta_t],
-            np.arange(src_snk_times[1] + 1)[delta_t:-delta_t],
-            np.arange(src_snk_times[2] + 1)[delta_t:-delta_t],
+            np.arange(src_snk_times[0])[delta_t:-delta_t],
+            np.arange(src_snk_times[1])[delta_t:-delta_t],
+            np.arange(src_snk_times[2])[delta_t:-delta_t],
         )
     )
 
     # Fit to the average of the data
+    print(f"{np.shape(E0i)=}")
     x_avg = [
         tau_values,
         t_values,
@@ -148,12 +145,12 @@ def fit_3ptfn_2exp(
         method="Nelder-Mead",
         options={"disp": False},
     )
-    # print(f"{resavg=}")
+    print(f"{resavg=}")
     fit_param_avg = resavg.x
     threept_fit_avg = threeptBS(x_avg, fit_param_avg)
     chisq = fitfunc.chisqfn(resavg.x, threeptBS, x_avg, fitdata_avg, cvinv)
     redchisq = chisq / (len(fitdata_avg) - len(p0))
-    # print(f"{redchisq=}")
+    print(f"{redchisq=}")
 
     # Fit to each bootstrap
     p0 = fit_param_avg
@@ -186,11 +183,11 @@ def fit_3ptfn_2exp(
     twopt_denominator = np.concatenate(
         (
             [twoptfn_list[1][:, src_snk_times[0], 0]]
-            * (src_snk_times[0] + 1 - 2 * delta_t),
+            * (src_snk_times[0] - 2 * delta_t),
             [twoptfn_list[1][:, src_snk_times[1], 0]]
-            * (src_snk_times[1] + 1 - 2 * delta_t),
+            * (src_snk_times[1] - 2 * delta_t),
             [twoptfn_list[1][:, src_snk_times[2], 0]]
-            * (src_snk_times[2] + 1 - 2 * delta_t),
+            * (src_snk_times[2] - 2 * delta_t),
         )
     )
     twopt_denominator = np.moveaxis(twopt_denominator, 0, 1)
@@ -209,11 +206,8 @@ def fit_3ptfn_2exp(
     return (
         fit_param_boot,
         fit_ratio_boot,
-        threept_fit_boot,
         fit_param_avg,
         redchisq,
-        best_fit_n,
-        best_fit_s,
     )
 
 
@@ -238,7 +232,7 @@ def fit_full_ratio(
         ),
         axis=1,
     )
-    # print(f"{np.shape(fitdata)=}")
+    print(f"{np.shape(fitdata)=}")
     t_values = np.concatenate(
         (
             [src_snk_times[0]] * (src_snk_times[0] - 2 * delta_t),
@@ -255,7 +249,7 @@ def fit_full_ratio(
     )
 
     # Fit to the average of the data
-    # print(f"{np.shape(E0i)=}")
+    print(f"{np.shape(E0i)=}")
     x_avg = [
         tau_values,
         t_values,
@@ -278,12 +272,12 @@ def fit_full_ratio(
         method="Nelder-Mead",
         options={"disp": False},
     )
-    # print(f"{resavg=}")
+    print(f"{resavg=}")
     fit_param_avg = resavg.x
     threept_fit_avg = threeptBS(x_avg, fit_param_avg)
     chisq = fitfunc.chisqfn(resavg.x, threeptBS, x_avg, fitdata_avg, cvinv)
     redchisq = chisq / (len(fitdata_avg) - len(p0))
-    # print(f"{redchisq=}")
+    print(f"{redchisq=}")
 
     # Fit to each bootstrap
     p0 = fit_param_avg
@@ -395,8 +389,8 @@ def make_mat_elements(fit_params, datadir):
         factor = np.sqrt(2) * np.sqrt(neutron_energy / (neutron_energy + neutron_mass))
         mat_element = fit_params[imom] * factor
 
-        # print(f"{np.average(factor)=}")
-        # print(f"{np.average(mat_element)=}")
+        print(f"{np.average(factor)=}")
+        print(f"{np.average(mat_element)=}")
         mat_element_list.append(mat_element)
 
     return np.array(mat_element_list)
@@ -437,7 +431,7 @@ def plot_3ptfn(threepoint, src_snk_time=10):
     )
     # plt.semilogy()
 
-    plt.show()
+    # plt.show()
     plt.close()
 
 
@@ -560,14 +554,14 @@ def plot_all_ratios(ratios, src_snk_times, plotdir, plotparam, title=""):
     for icorr, corr in enumerate(ratios):
         plot_time = time[: src_snk_times[icorr]] - src_snk_times[icorr] / 2
         plot_time2 = time - src_snk_times[icorr] / 2
-        # print(f"{plot_time2=}")
         ydata = np.average(corr, axis=0)
         yerror = np.std(corr, axis=0)
-
         axarr[icorr].errorbar(
-            plot_time2[1 : src_snk_times[icorr]],
-            ydata[1 : src_snk_times[icorr]],
-            yerror[1 : src_snk_times[icorr]],
+            plot_time2[: src_snk_times[icorr]],
+            # ydata,
+            # yerror,
+            ydata[: src_snk_times[icorr]],
+            yerror[: src_snk_times[icorr]],
             capsize=4,
             elinewidth=1,
             color=_colors[icorr],
@@ -595,7 +589,7 @@ def plot_all_ratios(ratios, src_snk_times, plotdir, plotparam, title=""):
     # )
     savefile = plotdir / Path(f"{title}.pdf")
     savefile.parent.mkdir(parents=True, exist_ok=True)
-    # print(f"{savefile=}")
+    print(f"{savefile=}")
     plt.savefig(savefile)
     # plt.show()
     plt.close()
@@ -622,20 +616,20 @@ def plot_all_fitratios(
 
     f, axarr = plt.subplots(1, 3, sharex=True, sharey=True, figsize=(16, 9))
     for icorr, corr in enumerate(ratios):
-        # plot_time = time[: src_snk_times[icorr]] - (src_snk_times[icorr] - 1) / 2
-        # print(f"{plot_time=}")
-        plot_time2 = time - (src_snk_times[icorr]) / 2
+        plot_time = time[: src_snk_times[icorr]] - src_snk_times[icorr] / 2
+        plot_time2 = time - src_snk_times[icorr] / 2
         ydata = np.average(corr, axis=0)
         yerror = np.std(corr, axis=0)
         tau_values = (
-            np.arange(src_snk_times[icorr] + 1)[delta_t:-delta_t]
-            - (src_snk_times[icorr]) / 2
+            np.arange(src_snk_times[icorr])[delta_t:-delta_t] - src_snk_times[icorr] / 2
         )
 
         axarr[icorr].errorbar(
-            plot_time2[1 : src_snk_times[icorr]],
-            ydata[1 : src_snk_times[icorr]],
-            yerror[1 : src_snk_times[icorr]],
+            plot_time2[: src_snk_times[icorr]],
+            # ydata,
+            # yerror,
+            ydata[: src_snk_times[icorr]],
+            yerror[: src_snk_times[icorr]],
             capsize=4,
             elinewidth=1,
             color=_colors[icorr],
@@ -645,15 +639,9 @@ def plot_all_fitratios(
         )
         step_indices = [
             0,
-            src_snk_times[0] + 1 - (2 * delta_t),
-            src_snk_times[0] + 1 + src_snk_times[1] + 1 - (4 * delta_t),
-            src_snk_times[0]
-            + 1
-            + src_snk_times[1]
-            + 1
-            + src_snk_times[2]
-            + 1
-            - (6 * delta_t),
+            src_snk_times[0] - (2 * delta_t),
+            src_snk_times[0] + src_snk_times[1] - (4 * delta_t),
+            src_snk_times[0] + src_snk_times[1] + src_snk_times[2] - (6 * delta_t),
         ]
         axarr[icorr].plot(
             tau_values,
@@ -719,168 +707,16 @@ def plot_all_fitratios(
     return
 
 
-def plot_full_fitratios(
-    ratios,
-    threept_fit,
-    twopt_fit,
-    delta_t,
-    src_snk_times,
-    redchisq,
-    fit_param_boot,
-    plotdir,
-    plotparam,
-    title="",
-):
-    time = np.arange(64)
-    labels = [
-        r"$t_{\mathrm{sep}}=10$",
-        r"$t_{\mathrm{sep}}=13$",
-        r"$t_{\mathrm{sep}}=16$",
-    ]
-
-    f, axarr = plt.subplots(1, 3, sharex=True, sharey=True, figsize=(16, 9))
-    for icorr, corr in enumerate(ratios):
-
-        plot_time2 = time - (src_snk_times[icorr]) / 2
-        ydata = np.average(corr, axis=0)
-        yerror = np.std(corr, axis=0)
-        plot_x_values = (
-            np.arange(src_snk_times[icorr] + 1)[delta_t:-delta_t]
-            - (src_snk_times[icorr]) / 2
-        )
-        tau_values = np.arange(src_snk_times[icorr] + 1)[delta_t:-delta_t]
-        t_values = np.array([src_snk_times[icorr]] * len(tau_values))
-        print(f"{tau_values=}")
-        print(f"{t_values=}")
-
-        step_indices = [
-            0,
-            src_snk_times[0] + 1 - (2 * delta_t),
-            src_snk_times[0] + 1 + src_snk_times[1] + 1 - (4 * delta_t),
-            src_snk_times[0]
-            + 1
-            + src_snk_times[1]
-            + 1
-            + src_snk_times[2]
-            + 1
-            - (6 * delta_t),
-        ]
-
-        nboot = 500
-        twoexp = fitfunc.initffncs("Twoexp").eval
-
-        twoptfn_sigma_t = np.array(
-            [twoexp(t_values, twopt_fit[1]["param"][iboot]) for iboot in range(nboot)]
-        )
-        twoptfn_sigma_tau = np.array(
-            [twoexp(tau_values, twopt_fit[1]["param"][iboot]) for iboot in range(nboot)]
-        )
-        twoptfn_sigma_tmtau = np.array(
-            [
-                twoexp(t_values - tau_values, twopt_fit[1]["param"][iboot])
-                for iboot in range(nboot)
-            ]
-        )
-
-        twoptfn_neutron_t = np.array(
-            [twoexp(t_values, twopt_fit[0]["param"][iboot]) for iboot in range(nboot)]
-        )
-        twoptfn_neutron_tau = np.array(
-            [twoexp(tau_values, twopt_fit[0]["param"][iboot]) for iboot in range(nboot)]
-        )
-        twoptfn_neutron_tmtau = np.array(
-            [
-                twoexp(t_values - tau_values, twopt_fit[0]["param"][iboot])
-                for iboot in range(nboot)
-            ]
-        )
-
-        ratio_factor = (
-            1
-            / twoptfn_sigma_t
-            * np.sqrt(
-                (twoptfn_sigma_tau * twoptfn_sigma_t * twoptfn_neutron_tmtau)
-                / (twoptfn_neutron_tau * twoptfn_neutron_t * twoptfn_sigma_tmtau)
-            )
-        )
-
-        ratio_ = (
-            threept_fit[:, step_indices[icorr] : step_indices[icorr + 1]] * ratio_factor
-        )
-        # print(f"{np.shape(ratio_)=}")
-
-        axarr[icorr].errorbar(
-            plot_time2[1 : src_snk_times[icorr]],
-            ydata[1 : src_snk_times[icorr]],
-            yerror[1 : src_snk_times[icorr]],
-            capsize=4,
-            elinewidth=1,
-            color=_colors[icorr],
-            fmt=_fmts[icorr],
-            label=labels[icorr],
-        )
-        axarr[icorr].plot(
-            plot_x_values,
-            np.average(ratio_, axis=0),
-            color=_colors[3],
-        )
-        axarr[icorr].fill_between(
-            plot_x_values,
-            np.average(ratio_, axis=0) - np.std(ratio_, axis=0),
-            np.average(ratio_, axis=0) + np.std(ratio_, axis=0),
-            alpha=0.3,
-            linewidth=0,
-            color=_colors[3],
-        )
-        axarr[icorr].axhline(
-            np.average(fit_param_boot[:, 0]),
-            color=_colors[5],
-            label=rf"fit = {err_brackets(np.average(fit_param_boot[:, 0]), np.std(fit_param_boot[:, 0]))}",
-        )
-
-        plot_time3 = np.array([-20, 20])
-        axarr[icorr].fill_between(
-            plot_time3,
-            [np.average(fit_param_boot[:, 0]) - np.std(fit_param_boot[:, 0])]
-            * len(plot_time3),
-            [np.average(fit_param_boot[:, 0]) + np.std(fit_param_boot[:, 0])]
-            * len(plot_time3),
-            alpha=0.3,
-            linewidth=0,
-            color=_colors[5],
-        )
-
-        axarr[icorr].grid(True)
-        axarr[icorr].legend(fontsize=15, loc="upper left")
-        axarr[icorr].set_xlabel(r"$\tau-t_{\mathrm{sep}}/2$", labelpad=14, fontsize=18)
-        axarr[icorr].set_ylabel(
-            r"$R(\vec{p}\, ; t_{\mathrm{sep}}, \tau)$", labelpad=5, fontsize=18
-        )
-        axarr[icorr].label_outer()
-        # axarr[icorr].set_xlim(-src_snk_times[-1] - 1, src_snk_times[-1] + 1)
-        axarr[icorr].set_xlim(plot_time2[0] - 0.5, plot_time2[src_snk_times[-1]] + 0.5)
-
-    f.suptitle(
-        rf"{plotparam[3]} 3-point function ratio with $\hat{{\mathcal{{O}}}}=${plotparam[1]}, $\Gamma = ${plotparam[2]}, $\vec{{q}}\, ={plotparam[0][1:]}$ with two-state fit $\chi^2_{{\mathrm{{dof}}}}={redchisq:.2f}$"
-    )
-    savefile = plotdir / Path(f"{title}_full.pdf")
-    savefile.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(savefile)
-    # plt.show()
-    plt.close()
-    return
-
-
 def make_full_ratio(threeptfn, twoptfn_sigma_real, twoptfn_neutron_real, src_snk_time):
     """Make the ratio of two-point and three-point functions which produces the plateau"""
     sqrt_factor = np.sqrt(
         (
-            twoptfn_sigma_real[:, : src_snk_time + 1]
-            * twoptfn_neutron_real[:, src_snk_time::-1]
+            twoptfn_sigma_real[:, :src_snk_time]
+            * twoptfn_neutron_real[:, src_snk_time - 1 :: -1]
         )
         / (
-            twoptfn_neutron_real[:, : src_snk_time + 1]
-            * twoptfn_sigma_real[:, src_snk_time::-1]
+            twoptfn_neutron_real[:, :src_snk_time]
+            * twoptfn_sigma_real[:, src_snk_time - 1 :: -1]
         )
     )
     prefactor_full = np.einsum(
@@ -891,7 +727,7 @@ def make_full_ratio(threeptfn, twoptfn_sigma_real, twoptfn_neutron_real, src_snk
         )
         / twoptfn_sigma_real[:, src_snk_time],
     )
-    ratio = np.einsum("ijk,ij->ijk", threeptfn[:, : src_snk_time + 1], prefactor_full)
+    ratio = np.einsum("ijk,ij->ijk", threeptfn[:, :src_snk_time], prefactor_full)
     return ratio
 
 
@@ -901,10 +737,10 @@ def main():
 
     # --- directories ---
     latticedir = Path.home() / Path(
-        "Documents/PhD/lattice_results/transition_3pt_function/"
+        "Documents/AdelaideUniversity2019/PhD/2019/2expfitting/"
     )
     resultsdir = Path.home() / Path(
-        "Dropbox/PhD/analysis_code/transition_3pt_function/"
+        "Dropbox/PhD/analysis_code/transition_3pt_function/test"
     )
     plotdir = resultsdir / Path("plots/")
     plotdir2 = plotdir / Path("twopoint/")
@@ -916,7 +752,8 @@ def main():
 
     # # ======================================================================
     # # Make plots of the evxpt data to compare
-    # evxpt_data(latticedir, resultsdir, plotdir, datadir)
+    evxpt_data(latticedir, resultsdir, plotdir, datadir)
+    exit()
     # # ======================================================================
 
     # ======================================================================
@@ -943,9 +780,9 @@ def main():
     # ======================================================================
     # Read in the three point function data
     operators_tex = [
-        # "$\gamma_1$",
-        # "$\gamma_2$",
-        # "$\gamma_3$",
+        "$\gamma_1$",
+        "$\gamma_2$",
+        "$\gamma_3$",
         "$\gamma_4$",
         # "g5",
         # "g51",
@@ -961,9 +798,9 @@ def main():
         # "gI",
     ]
     operators = [
-        # "g0",
-        # "g1",
-        # "g2",
+        "g0",
+        "g1",
+        "g2",
         "g3",
         # "g5",
         # "g51",
@@ -984,18 +821,17 @@ def main():
     # momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
     # momenta = ["p+0+0+0", "p-1+0+0", "p-1-1+0"]
     src_snk_times = np.array([10, 13, 16])
-    rel = "nr"  #'rel'
-    delta_t = 4
 
+    g3_mat_elements = []
     for imom, mom in enumerate(momenta):
         print(f"\n{mom}")
         # ======================================================================
         # Read the two-point function and fit a two-exponential function to it
         twoptfn_filename_sigma = latticedir / Path(
-            f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp120620/sh_gij_p21_90-sh_gij_p21_90/p+0+0+0/barspec_nucleon_{rel}_500cfgs.pickle"
+            f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp120620/sh_gij_p21_90-sh_gij_p21_90/p+0+0+0/barspec_nucleon_rel_500cfgs.pickle"
         )
         twoptfn_filename_neutron = latticedir / Path(
-            f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp121040/sh_gij_p21_90-sh_gij_p21_90/{mom}/barspec_nucleon_{rel}_500cfgs.pickle"
+            f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp121040/sh_gij_p21_90-sh_gij_p21_90/{mom}/barspec_nucleon_rel_500cfgs.pickle"
         )
         twoptfn_sigma = read_pickle(twoptfn_filename_sigma, nboot=500, nbin=1)
         twoptfn_neutron = read_pickle(twoptfn_filename_neutron, nboot=500, nbin=1)
@@ -1064,7 +900,7 @@ def main():
                 #     ratio_t13[:, :, 0],
                 #     ratio_t16[:, :, 0],
                 # ]
-                simple_ratio_list = np.array([ratio_t10, ratio_t13, ratio_t16])
+                ratio_list_real = np.array([ratio_t10, ratio_t13, ratio_t16])
 
                 # ======================================================================
                 # Construct the full ratio of 3pt and 2pt functions
@@ -1080,18 +916,6 @@ def main():
 
                 # ======================================================================
                 # plot the real part of the 3pt fn ratio
-                full_ratio_list_reim = [
-                    [
-                        ratio_full_t10[:, :, 0],
-                        ratio_full_t13[:, :, 0],
-                        ratio_full_t16[:, :, 0],
-                    ],
-                    [
-                        ratio_full_t10[:, :, 1],
-                        ratio_full_t13[:, :, 1],
-                        ratio_full_t16[:, :, 1],
-                    ],
-                ]
                 full_ratio_list_real = [
                     ratio_full_t10[:, :, 0],
                     ratio_full_t13[:, :, 0],
@@ -1133,27 +957,22 @@ def main():
                     "kp120620kp121040",
                     "kp120620kp120620",
                 ]
-                datafile_n = datadir / Path(
-                    f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt.pkl"
-                )
+                datafile_n = datadir / Path(f"{kappa_combs[0]}_{mom}_fitlist_2pt.pkl")
                 with open(datafile_n, "rb") as file_in:
                     fit_data_n = pickle.load(file_in)
-                datafile_s = datadir / Path(
-                    f"{kappa_combs[1]}_p+0+0+0_{rel}_fitlist_2pt.pkl"
-                )
+                datafile_s = datadir / Path(f"{kappa_combs[1]}_p+0+0+0_fitlist_2pt.pkl")
                 with open(datafile_s, "rb") as file_in:
                     fit_data_s = pickle.load(file_in)
 
+                delta_t = 2
+                print(f"{np.shape(threeptfn_t10)=}")
+
                 for ir, reim in enumerate(["real", "imag"]):
-                    print(reim)
                     (
                         fit_param_boot,
                         fit_ratio_boot,
-                        threept_fit_boot,
                         fit_param_avg,
                         redchisq,
-                        best_fit_n,
-                        best_fit_s,
                     ) = fit_3ptfn_2exp(
                         np.array([threeptfn_t10, threeptfn_t13, threeptfn_t16]),
                         np.array([twoptfn_neutron, twoptfn_sigma]),
@@ -1163,23 +982,11 @@ def main():
                         datadir,
                         ir,
                     )
-                    fit_params = [
-                        fit_param_boot,
-                        fit_ratio_boot,
-                        fit_param_avg,
-                        redchisq,
-                    ]
-                    datafile = datadir / Path(
-                        f"{mom}_{operator}_{pol}_{rel}_{reim}_3pt_fit.pkl"
-                    )
-                    with open(datafile, "wb") as file_out:
-                        pickle.dump(fit_params, file_out)
-
+                    # g3_mat_elements.append(fit_param_boot)
                     print(f"{np.average(fit_param_boot, axis=0)=}")
-                    print(f"{np.shape(fit_param_boot)=}")
 
                     plot_all_fitratios(
-                        simple_ratio_list[:, :, :, ir],
+                        ratio_list_real[:, :, :, ir],
                         fit_ratio_boot,
                         delta_t,
                         src_snk_times,
@@ -1189,39 +996,39 @@ def main():
                         [mom, operators_tex[iop], pol, reim],
                         title=f"{mom}/{pol}/fit_ratios_{reim}_{operator}",
                     )
-
-                    plot_full_fitratios(
-                        full_ratio_list_reim[ir],
-                        threept_fit_boot,
-                        [best_fit_n, best_fit_s],
-                        delta_t,
-                        src_snk_times,
-                        redchisq,
-                        fit_param_boot,
-                        plotdir,
-                        [mom, operators_tex[iop], pol, reim],
-                        title=f"{mom}/{pol}/fit_ratios_{reim}_{operator}",
-                    )
+    # g3_mat_elements = np.array(g3_mat_elements)
+    # print(f"{g3_mat_elements=}")
+    # print(f"{np.shape(g3_mat_elements)=}")
+    # print(f"{np.average(g3_mat_elements, axis=1)[:, 0]=}")
+    # mat_element_vals = make_mat_elements(g3_mat_elements[:, :, 0], datadir)
 
 
 def evxpt_data(latticedir, resultsdir, plotdir, datadir):
     """Using the evxpt result files, construct and plot a ratio of three-point and two-point functions"""
     # ======================================================================
     # Read the two-point function and fit a two-exponential function to it
-    twoptfn_filename_sigma = latticedir / Path(
-        "mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp120620/sh_gij_p21_90-sh_gij_p21_90/p+0+0+0/barspec_nucleon_rel_500cfgs.pickle"
-    )
-    twoptfn_sigma = read_pickle(twoptfn_filename_sigma, nboot=500, nbin=1)
-    twoptfn_sigma_real = twoptfn_sigma[:, :, 0]
+    # twoptfn_filename_sigma = latticedir / Path(
+    #     "mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp120620/sh_gij_p21_90-sh_gij_p21_90/p+0+0+0/barspec_nucleon_rel_500cfgs.pickle"
+    # )
+    # twoptfn_sigma = read_pickle(twoptfn_filename_sigma, nboot=500, nbin=1)
+    # twoptfn_sigma_real = twoptfn_sigma[:, :, 0]
 
-    twoptfn_filename_neutron = latticedir / Path(
-        "mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp121040/sh_gij_p21_90-sh_gij_p21_90/p+0+0+0/barspec_nucleon_rel_500cfgs.pickle"
-    )
-    twoptfn_neutron = read_pickle(twoptfn_filename_neutron, nboot=500, nbin=1)
-    twoptfn_neutron_real = twoptfn_neutron[:, :, 0]
+    # twoptfn_filename_neutron = latticedir / Path(
+    #     "mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp121040/sh_gij_p21_90-sh_gij_p21_90/p+0+0+0/barspec_nucleon_rel_500cfgs.pickle"
+    # )
+    # twoptfn_neutron = read_pickle(twoptfn_filename_neutron, nboot=500, nbin=1)
+    # twoptfn_neutron_real = twoptfn_neutron[:, :, 0]
+
+    twoptfn_file = latticedir / Path(f"t13/mass/nonrel/p+0+0+0/exp2/dump/evxpt.res")
+    twoptfn = evxptdata(twoptfn_file, numbers=[0], nboot=500, nbin=1)
+    print(np.shape(twoptfn))
+    twoptfn_real = twoptfn[:, 0, :, 0]
+    print(twoptfn_real[:, 6] ** (-1))
 
     # ======================================================================
     # Read the three-point function data from the evxpt files
+    operators_tex = ["$\gamma_4$"]
+
     currents = [
         "vector-0",
         "vector-1",
@@ -1239,35 +1046,39 @@ def evxpt_data(latticedir, resultsdir, plotdir, datadir):
         "tensor-23",
     ]
     polarizations = ["unpol", "pol_3"]
-    momenta = ["q+0+0+0", "q+1+0+0", "q+1+1+0", "q+1+1+1", "q+2+0+0", "q+2+1+0"]
-    # momenta = ["q+0+0+0", "q-1+0+0", "q-1-1+0", "q-1-1-1", "q-2+0+0", "q-2-1+0"]
+    momenta = ["q+0+0+0"]
     current_choice = 0
-    pol_choice = 1
+    pol_choice = 0
     mom_choice = 0
+    mom = momenta[mom_choice]
+    operator = currents[current_choice]
+    pol = polarizations[pol_choice]
+    iop = mom_choice
 
     evxptres_t10 = latticedir / Path(
-        f"b5p50kp121040kp120620c2p6500-32x64_t10/d0/point/vector/{currents[current_choice]}/kp121040kp120620/p+0+0+0/{momenta[mom_choice]}/d_quark/{polarizations[pol_choice]}/dump/dump.res"
+        f"t10/point/p+0+0+0/{momenta[mom_choice]}/g0/d/dump/evxpt.res"
     )
     threepoint_t10 = evxptdata(evxptres_t10, numbers=[0], nboot=500, nbin=1)
     threepoint_t10_real = threepoint_t10[:, 0, :, 0]
 
     evxptres_t13 = latticedir / Path(
-        f"b5p50kp121040kp120620c2p6500-32x64_t13/d0/point/vector/{currents[current_choice]}/kp121040kp120620/p+0+0+0/{momenta[mom_choice]}/d_quark/{polarizations[pol_choice]}/dump/dump.res"
+        f"t13/point/p+0+0+0/{momenta[mom_choice]}/g0/d/dump/evxpt.res"
     )
     threepoint_t13 = evxptdata(evxptres_t13, numbers=[0], nboot=500, nbin=1)
     threepoint_t13_real = threepoint_t13[:, 0, :, 0]
 
     evxptres_t16 = latticedir / Path(
-        f"b5p50kp121040kp120620c2p6500-32x64_t16/d0/point/vector/{currents[current_choice]}/kp121040kp120620/p+0+0+0/{momenta[mom_choice]}/d_quark/{polarizations[pol_choice]}/dump/dump.res"
+        f"t16/point/p+0+0+0/{momenta[mom_choice]}/g0/d/dump/evxpt.res"
     )
     threepoint_t16 = evxptdata(evxptres_t16, numbers=[0], nboot=500, nbin=1)
     threepoint_t16_real = threepoint_t16[:, 0, :, 0]
 
     # ======================================================================
     # Plot all the 3pt functions
-    # plot_3ptfn(threepoint_t10_real, src_snk_time=10)
-    # plot_3ptfn(threepoint_t13_real, src_snk_time=13)
-    # plot_3ptfn(threepoint_t16_real, src_snk_time=16)
+    plot_3ptfn(threepoint_t10_real, src_snk_time=10)
+    plot_3ptfn(threepoint_t13_real, src_snk_time=13)
+    plot_3ptfn(threepoint_t16_real, src_snk_time=16)
+
     threepoint_fns = np.array(
         [threepoint_t10_real, threepoint_t13_real, threepoint_t16_real]
     )
@@ -1277,27 +1088,52 @@ def evxpt_data(latticedir, resultsdir, plotdir, datadir):
     # ======================================================================
     # Construct the simple ratio of 3pt and 2pt functions
     ratio_unpol_t10 = np.einsum(
-        "ij,i->ij", threepoint_t10_real, twoptfn_sigma_real[:, 10] ** (-1)
+        "ij,i->ij", threepoint_t10_real, twoptfn_real[:, 10] ** (-1)
     )
     ratio_unpol_t13 = np.einsum(
-        "ij,i->ij", threepoint_t13_real, twoptfn_sigma_real[:, 13] ** (-1)
+        "ij,i->ij", threepoint_t13_real, twoptfn_real[:, 13] ** (-1)
     )
     ratio_unpol_t16 = np.einsum(
-        "ij,i->ij", threepoint_t16_real, twoptfn_sigma_real[:, 16] ** (-1)
+        "ij,i->ij", threepoint_t16_real, twoptfn_real[:, 16] ** (-1)
+    )
+
+    # ======================================================================
+    # Construct the full ratio of 3pt and 2pt functions
+    print(np.shape(threepoint_t10))
+    print(np.shape(threepoint_t10_real))
+    ratio_full_t10 = make_full_ratio(
+        threepoint_t10[:, 0, :, :], twoptfn_real, twoptfn_real, 10
+    )
+    ratio_full_t13 = make_full_ratio(
+        threepoint_t13[:, 0, :, :], twoptfn_real, twoptfn_real, 13
+    )
+    ratio_full_t16 = make_full_ratio(
+        threepoint_t16[:, 0, :, :], twoptfn_real, twoptfn_real, 16
+    )
+    full_ratio_list_real = [
+        ratio_full_t10[:, :, 0],
+        ratio_full_t13[:, :, 0],
+        ratio_full_t16[:, :, 0],
+    ]
+    full_ratio_list = [
+        ratio_full_t10,
+        ratio_full_t13,
+        ratio_full_t16,
+    ]
+    plot_all_ratios(
+        full_ratio_list_real,
+        src_snk_times,
+        plotdir,
+        [mom, operators_tex[iop], pol],
+        title=f"{mom}/{pol}/full_ratios_real_{operator}",
     )
 
     print(f"{threepoint_t10_real=}")
-    print(twoptfn_sigma_real[:, 10] ** (-1))
+    # print(twoptfn_real[:, 10] ** (-1))
 
-    ratio_unpol_t10 = (
-        -1 * threepoint_t10_real / np.array([twoptfn_sigma_real[:, 10]] * 64).T
-    )
-    ratio_unpol_t13 = (
-        -1 * threepoint_t13_real / np.array([twoptfn_sigma_real[:, 13]] * 64).T
-    )
-    ratio_unpol_t16 = (
-        -1 * threepoint_t16_real / np.array([twoptfn_sigma_real[:, 16]] * 64).T
-    )
+    ratio_unpol_t10 = -1 * threepoint_t10_real / np.array([twoptfn_real[:, 10]] * 64).T
+    ratio_unpol_t13 = -1 * threepoint_t13_real / np.array([twoptfn_real[:, 13]] * 64).T
+    ratio_unpol_t16 = -1 * threepoint_t16_real / np.array([twoptfn_real[:, 16]] * 64).T
 
     ratio_list = np.array([ratio_unpol_t10, ratio_unpol_t13, ratio_unpol_t16])
     src_snk_times = np.array([10, 13, 16])
