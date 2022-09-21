@@ -262,12 +262,8 @@ def fit_ratio_2exp(
     src_snk_times,
     delta_t,
     datadir,
-    ireim=0,
 ):
-    """Fit to the three-point function with a two-exponential function, which includes parameters from the two-point functions
-    ireim=0: real
-    ireim=1: imaginary
-    """
+    """Fit to the three-point function with a two-exponential function, which includes parameters from the two-point functions"""
 
     chisq_tol = 0.01
     fitweights_n = np.array([fit["weight"] for fit in fit_data_list[0]])
@@ -275,7 +271,19 @@ def fit_ratio_2exp(
     fitweights_n = fitweights_n / sum(fitweights_n)
     fitparams_n = np.array([fit["param"] for fit in fit_data_list[0]])
     best_fit_n = fit_data_list[0][np.argmax(fitweights_n)]
+    best2_fit_n = fit_data_list[0][np.argsort(fitweights_n)[1]]
     weighted_fit_n = np.einsum("i,ijk->jk", fitweights_n, fitparams_n)
+    # print(f"{fitweights_n=}")
+    # print(np.where(fitweights_n > chisq_tol, fitweights_n, 0))
+    print(f"{best_fit_n['x']=}")
+    print(f"{best_fit_n['redchisq']=}")
+    print(f"{best_fit_n['paramavg'][1]=}")
+    print(f"{best2_fit_n['x']=}")
+    print(f"{best2_fit_n['redchisq']=}")
+    print(f"{best2_fit_n['paramavg'][1]=}")
+    # print(f"{[i for i in best_fit_n]=}")
+    # print(f"{np.average(best_fit_n['param'],axis=0)=}")
+    # print(f"{np.average(weighted_fit_n,axis=0)=}")
 
     fitweights_s = np.array([fit["weight"] for fit in fit_data_list[1]])
     fitweights_s = np.where(fitweights_s > chisq_tol, fitweights_s, 0)
@@ -299,13 +307,12 @@ def fit_ratio_2exp(
     # Create the fit data
     fitdata = np.concatenate(
         (
-            ratio_list[0][:, delta_t : src_snk_times[0] + 1 - delta_t, ireim],
-            ratio_list[1][:, delta_t : src_snk_times[1] + 1 - delta_t, ireim],
-            ratio_list[2][:, delta_t : src_snk_times[2] + 1 - delta_t, ireim],
+            ratio_list[0][:, delta_t : src_snk_times[0] + 1 - delta_t],
+            ratio_list[1][:, delta_t : src_snk_times[1] + 1 - delta_t],
+            ratio_list[2][:, delta_t : src_snk_times[2] + 1 - delta_t],
         ),
         axis=1,
     )
-    # print(f"{np.shape(fitdata)=}")
     t_values = np.concatenate(
         (
             [src_snk_times[0]] * (src_snk_times[0] + 1 - 2 * delta_t),
@@ -337,7 +344,7 @@ def fit_ratio_2exp(
     p0 = [1, 1, 1, 1]
     fitdata_avg = np.average(fitdata, axis=0)
     fitdata_std = np.std(fitdata, axis=0)
-    cvinv = np.linalg.inv(np.cov(fitdata.T))
+    cvinv = np.linalg.pinv(np.cov(fitdata.T))
     var_inv = np.diag(1 / (fitdata_std**2))
     resavg = syopt.minimize(
         fitfunc.chisqfn,
@@ -348,7 +355,7 @@ def fit_ratio_2exp(
     )
 
     fit_param_avg = resavg.x
-    ratio_fit_avg = fitfnc_2exp(x_avg, fit_param_avg)
+    # ratio_fit_avg = fitfnc_2exp(x_avg, fit_param_avg)
     chisq = fitfunc.chisqfn(resavg.x, fitfnc_2exp, x_avg, fitdata_avg, cvinv)
     redchisq = chisq / (len(fitdata_avg) - len(p0))
 
@@ -381,6 +388,11 @@ def fit_ratio_2exp(
         ratio_fit_boot.append(fitfnc_2exp(x, res.x))
     ratio_fit_boot = np.array(ratio_fit_boot)
     fit_param_boot = np.array(fit_param_boot)
+
+    # chisq = fitfunc.chisqfn(
+    #     np.average(fit_param_boot, axis=0), fitfnc_2exp, x_avg, fitdata_avg, cvinv
+    # )
+    # redchisq = chisq / (len(fitdata_avg) - len(p0))
 
     return (
         fit_param_boot,
@@ -855,7 +867,6 @@ def plot_full_fitratios(
         ratio_ = (
             threept_fit[:, step_indices[icorr] : step_indices[icorr + 1]] * ratio_factor
         )
-        # print(f"{np.shape(ratio_)=}")
 
         axarr[icorr].errorbar(
             plot_time2[1 : src_snk_times[icorr]],
@@ -876,6 +887,123 @@ def plot_full_fitratios(
             plot_x_values,
             np.average(ratio_, axis=0) - np.std(ratio_, axis=0),
             np.average(ratio_, axis=0) + np.std(ratio_, axis=0),
+            alpha=0.3,
+            linewidth=0,
+            color=_colors[3],
+        )
+        axarr[icorr].axhline(
+            np.average(fit_param_boot[:, 0]),
+            color=_colors[5],
+            label=rf"fit = {err_brackets(np.average(fit_param_boot[:, 0]), np.std(fit_param_boot[:, 0]))}",
+        )
+
+        plot_time3 = np.array([-20, 20])
+        axarr[icorr].fill_between(
+            plot_time3,
+            [np.average(fit_param_boot[:, 0]) - np.std(fit_param_boot[:, 0])]
+            * len(plot_time3),
+            [np.average(fit_param_boot[:, 0]) + np.std(fit_param_boot[:, 0])]
+            * len(plot_time3),
+            alpha=0.3,
+            linewidth=0,
+            color=_colors[5],
+        )
+
+        axarr[icorr].grid(True)
+        axarr[icorr].legend(fontsize=15, loc="upper left")
+        axarr[icorr].set_xlabel(r"$\tau-t_{\mathrm{sep}}/2$", labelpad=14, fontsize=18)
+        axarr[icorr].set_ylabel(
+            r"$R(\vec{p}\, ; t_{\mathrm{sep}}, \tau)$", labelpad=5, fontsize=18
+        )
+        axarr[icorr].label_outer()
+        # axarr[icorr].set_xlim(-src_snk_times[-1] - 1, src_snk_times[-1] + 1)
+        axarr[icorr].set_xlim(plot_time2[0] - 0.5, plot_time2[src_snk_times[-1]] + 0.5)
+
+    f.suptitle(
+        rf"{plotparam[3]} 3-point function ratio with $\hat{{\mathcal{{O}}}}=${plotparam[1]}, $\Gamma = ${plotparam[2]}, $\vec{{q}}\, ={plotparam[0][1:]}$ with two-state fit $\chi^2_{{\mathrm{{dof}}}}={redchisq:.2f}$"
+    )
+    savefile = plotdir / Path(f"{title}_full.pdf")
+    savefile.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(savefile)
+    # plt.show()
+    plt.close()
+    return
+
+
+def plot_ratio_fit(
+    ratios,
+    ratio_fit,
+    delta_t,
+    src_snk_times,
+    redchisq,
+    fit_param_boot,
+    plotdir,
+    plotparam,
+    title="",
+):
+    time = np.arange(64)
+    labels = [
+        r"$t_{\mathrm{sep}}=10$",
+        r"$t_{\mathrm{sep}}=13$",
+        r"$t_{\mathrm{sep}}=16$",
+    ]
+
+    f, axarr = plt.subplots(1, 3, sharex=True, sharey=True, figsize=(16, 9))
+    for icorr, corr in enumerate(ratios):
+        plot_time2 = time - (src_snk_times[icorr]) / 2
+        ydata = np.average(corr, axis=0)
+        yerror = np.std(corr, axis=0)
+        plot_x_values = (
+            np.arange(src_snk_times[icorr] + 1)[delta_t:-delta_t]
+            - (src_snk_times[icorr]) / 2
+        )
+        tau_values = np.arange(src_snk_times[icorr] + 1)[delta_t:-delta_t]
+        t_values = np.array([src_snk_times[icorr]] * len(tau_values))
+
+        step_indices = [
+            0,
+            src_snk_times[0] + 1 - (2 * delta_t),
+            src_snk_times[0] + 1 + src_snk_times[1] + 1 - (4 * delta_t),
+            src_snk_times[0]
+            + 1
+            + src_snk_times[1]
+            + 1
+            + src_snk_times[2]
+            + 1
+            - (6 * delta_t),
+        ]
+
+        axarr[icorr].errorbar(
+            plot_time2[1 : src_snk_times[icorr]],
+            ydata[1 : src_snk_times[icorr]],
+            yerror[1 : src_snk_times[icorr]],
+            capsize=4,
+            elinewidth=1,
+            color=_colors[icorr],
+            fmt=_fmts[icorr],
+            label=labels[icorr],
+        )
+        axarr[icorr].plot(
+            plot_x_values,
+            np.average(
+                ratio_fit[:, step_indices[icorr] : step_indices[icorr + 1]], axis=0
+            ),
+            color=_colors[3],
+        )
+        axarr[icorr].fill_between(
+            plot_x_values,
+            np.average(
+                ratio_fit[:, step_indices[icorr] : step_indices[icorr + 1]], axis=0
+            )
+            - np.std(
+                ratio_fit[:, step_indices[icorr] : step_indices[icorr + 1]], axis=0
+            ),
+            np.average(
+                ratio_fit[:, step_indices[icorr] : step_indices[icorr + 1]], axis=0
+            )
+            + np.std(
+                ratio_fit[:, step_indices[icorr] : step_indices[icorr + 1]], axis=0
+            ),
             alpha=0.3,
             linewidth=0,
             color=_colors[3],
@@ -970,9 +1098,9 @@ def main():
     # ======================================================================
     # Read in the three point function data
     operators_tex = [
-        # "$\gamma_1$",
-        # "$\gamma_2$",
-        # "$\gamma_3$",
+        "$\gamma_1$",
+        "$\gamma_2$",
+        "$\gamma_3$",
         "$\gamma_4$",
         # "g5",
         # "g51",
@@ -988,9 +1116,9 @@ def main():
         # "gI",
     ]
     operators = [
-        # "g0",
-        # "g1",
-        # "g2",
+        "g0",
+        "g1",
+        "g2",
         "g3",
         # "g5",
         # "g51",
@@ -1124,6 +1252,10 @@ def main():
                     [mom, operators_tex[iop], pol],
                     title=f"{mom}/{pol}/full_ratios_real_{operator}",
                 )
+
+                # ======================================================================
+                # Read the results of the fit to the two-point functions
+
                 kappa_combs = [
                     "kp121040kp121040",
                     "kp121040kp120620",
@@ -1145,61 +1277,110 @@ def main():
                     print(reim)
                     # ======================================================================
                     # fit to the three-point function with a two-exponential function
+                    # (
+                    #     fit_param_boot,
+                    #     fit_ratio_boot,
+                    #     threept_fit_boot,
+                    #     fit_param_avg,
+                    #     redchisq,
+                    #     best_fit_n,
+                    #     best_fit_s,
+                    # ) = fit_3ptfn_2exp(
+                    #     np.array([threeptfn_t10, threeptfn_t13, threeptfn_t16]),
+                    #     np.array([twoptfn_neutron, twoptfn_sigma]),
+                    #     np.array([fit_data_n, fit_data_s]),
+                    #     src_snk_times,
+                    #     delta_t,
+                    #     datadir,
+                    #     ir,
+                    # )
+                    # fit_params = [
+                    #     fit_param_boot,
+                    #     fit_ratio_boot,
+                    #     fit_param_avg,
+                    #     redchisq,
+                    # ]
+
+                    # # Save the fit results to pickle files
+                    # datafile = datadir / Path(
+                    #     f"{mom}_{operator}_{pol}_{rel}_{reim}_3pt_fit.pkl"
+                    # )
+                    # with open(datafile, "wb") as file_out:
+                    #     pickle.dump(fit_params, file_out)
+
+                    # print(f"{np.average(fit_param_boot, axis=0)=}")
+                    # print(f"{np.shape(fit_param_boot)=}")
+
+                    # ======================================================================
+                    # fit to the ratio of 3pt and 2pt functions with a two-exponential function
                     (
-                        fit_param_boot,
-                        fit_ratio_boot,
-                        threept_fit_boot,
-                        fit_param_avg,
-                        redchisq,
+                        fit_param_ratio_boot,
+                        ratio_fit_boot,
+                        fit_param_ratio_avg,
+                        redchisq_ratio,
                         best_fit_n,
                         best_fit_s,
-                    ) = fit_3ptfn_2exp(
-                        np.array([threeptfn_t10, threeptfn_t13, threeptfn_t16]),
+                    ) = fit_ratio_2exp(
+                        full_ratio_list_reim[ir],
                         np.array([twoptfn_neutron, twoptfn_sigma]),
                         np.array([fit_data_n, fit_data_s]),
                         src_snk_times,
                         delta_t,
                         datadir,
-                        ir,
                     )
-                    fit_params = [
-                        fit_param_boot,
-                        fit_ratio_boot,
-                        fit_param_avg,
-                        redchisq,
+                    fit_params_ratio = [
+                        fit_param_ratio_boot,
+                        ratio_fit_boot,
+                        fit_param_ratio_avg,
+                        redchisq_ratio,
                     ]
-                    datafile = datadir / Path(
-                        f"{mom}_{operator}_{pol}_{rel}_{reim}_3pt_fit.pkl"
+
+                    # Save the fit results to pickle files
+                    datafile_ratio = datadir / Path(
+                        f"{mom}_{operator}_{pol}_{rel}_{reim}_3pt_ratio_fit.pkl"
                     )
-                    with open(datafile, "wb") as file_out:
-                        pickle.dump(fit_params, file_out)
+                    with open(datafile_ratio, "wb") as file_out:
+                        pickle.dump(fit_params_ratio, file_out)
 
-                    print(f"{np.average(fit_param_boot, axis=0)=}")
-                    print(f"{np.shape(fit_param_boot)=}")
+                    # ======================================================================
+                    # Plot the results of the fit to the 3pt function against a ratio of the data.
+                    # plot_all_fitratios(
+                    #     simple_ratio_list[:, :, :, ir],
+                    #     fit_ratio_boot,
+                    #     delta_t,
+                    #     src_snk_times,
+                    #     redchisq,
+                    #     fit_param_boot,
+                    #     plotdir,
+                    #     [mom, operators_tex[iop], pol, reim],
+                    #     title=f"{mom}/{pol}/fit_ratios_{reim}_{operator}",
+                    # )
 
-                    plot_all_fitratios(
-                        simple_ratio_list[:, :, :, ir],
-                        fit_ratio_boot,
-                        delta_t,
-                        src_snk_times,
-                        redchisq,
-                        fit_param_boot,
-                        plotdir,
-                        [mom, operators_tex[iop], pol, reim],
-                        title=f"{mom}/{pol}/fit_ratios_{reim}_{operator}",
-                    )
+                    # plot_full_fitratios(
+                    #     full_ratio_list_reim[ir],
+                    #     threept_fit_boot,
+                    #     [best_fit_n, best_fit_s],
+                    #     delta_t,
+                    #     src_snk_times,
+                    #     redchisq,
+                    #     fit_param_boot,
+                    #     plotdir,
+                    #     [mom, operators_tex[iop], pol, reim],
+                    #     title=f"{mom}/{pol}/fit_ratios_{reim}_{operator}",
+                    # )
 
-                    plot_full_fitratios(
+                    # ======================================================================
+                    # Plot the results of the fit to the ratio
+                    plot_ratio_fit(
                         full_ratio_list_reim[ir],
-                        threept_fit_boot,
-                        [best_fit_n, best_fit_s],
+                        ratio_fit_boot,
                         delta_t,
                         src_snk_times,
-                        redchisq,
-                        fit_param_boot,
+                        redchisq_ratio,
+                        fit_param_ratio_boot,
                         plotdir,
                         [mom, operators_tex[iop], pol, reim],
-                        title=f"{mom}/{pol}/fit_ratios_{reim}_{operator}",
+                        title=f"{mom}/{pol}/ratio_fit_{reim}_{operator}",
                     )
 
 

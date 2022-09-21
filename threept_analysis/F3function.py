@@ -251,7 +251,7 @@ def read_fit_data(nboot, datadir):
                 for ir, reim in enumerate(["real", "imag"]):
                     # print(reim)
                     datafile = datadir / Path(
-                        f"{mom}_{operator}_{pol}_{rel}_{reim}_3pt_fit.pkl"
+                        f"{mom}_{operator}_{pol}_{rel}_{reim}_3pt_ratio_fit.pkl"
                     )
                     with open(datafile, "rb") as file_in:
                         fit_data = pickle.load(file_in)
