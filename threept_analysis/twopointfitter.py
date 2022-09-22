@@ -49,8 +49,13 @@ def fit_2ptfn(evxptdir, plotdir, datadir, rel="rel"):
     momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
     twoexp_fitfunc = fitfunc.initffncs("Twoexp")
     # time_limits = [[1, 10], [15, 25]]
-    time_limits = [[1, 3], [15, 19]]
+    # time_limits = [[1, 3], [15, 19]]
     # time_limits = [[1, 1], [24, 24]]
+    time_limits = [
+        [[1, 6], [25, 25]],
+        [[1, 6], [21, 21]],
+        [[1, 6], [18, 18]],
+    ]
 
     for ikappa, kappa in enumerate(kappa_combs):
         print(f"\n{kappa}")
@@ -73,7 +78,7 @@ def fit_2ptfn(evxptdir, plotdir, datadir, rel="rel"):
             fitlist_2pt = stats.fit_loop(
                 twopoint_fn_real,
                 twoexp_fitfunc,
-                time_limits,
+                time_limits[imom],
                 plot=False,
                 disp=True,
                 time=False,
@@ -81,6 +86,61 @@ def fit_2ptfn(evxptdir, plotdir, datadir, rel="rel"):
             )
 
             datafile = datadir / Path(f"{kappa}_{mom}_{rel}_fitlist_2pt.pkl")
+            with open(datafile, "wb") as file_out:
+                pickle.dump(fitlist_2pt, file_out)
+    return
+
+
+def fit_2ptfn_3exp(evxptdir, plotdir, datadir, rel="rel"):
+    """Read the two-point function and fit a two-exponential function to it over a range of fit windows, then save the fit data to pickle files."""
+
+    kappa_combs = [
+        "kp121040kp121040",
+        "kp121040kp120620",
+    ]
+    momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
+    # momenta = ["p+1+0+0", "p+1+1+0"]
+    # fitfunction = fitfunc.initffncs("Threeexp")
+    fitfunction = fitfunc.initffncs("Threeexp_log")
+    # time_limits = [[1, 10], [15, 25]]
+    # time_limits = [[1, 5], [22, 27]]
+    # time_limits = [[1, 6], [25, 25]]
+    time_limits = [
+        [[1, 6], [25, 25]],
+        [[1, 6], [21, 21]],
+        [[1, 6], [18, 18]],
+    ]
+
+    for ikappa, kappa in enumerate(kappa_combs):
+        print(f"\n{kappa}")
+        for imom, mom in enumerate(momenta):
+            print(f"\n{mom}")
+            twopointfn_filename = evxptdir / Path(
+                f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/{kappa}/sh_gij_p21_90-sh_gij_p21_90/{mom}/barspec_nucleon_{rel}_500cfgs.pickle"
+            )
+            twopoint_fn = read_pickle(twopointfn_filename, nboot=500, nbin=1)
+
+            # Plot the effective mass of the two-point function
+            twopoint_fn_real = twopoint_fn[:, :, 0]
+
+            stats.bs_effmass(
+                twopoint_fn_real,
+                time_axis=1,
+                plot=True,
+                show=False,
+                savefile=plotdir / Path(f"twopoint/{kappa}_{mom}_effmass_2pt_fn.pdf"),
+            )
+            fitlist_2pt = stats.fit_loop_bayes(
+                twopoint_fn_real,
+                fitfunction,
+                time_limits[imom],
+                plot=False,
+                disp=True,
+                time=False,
+                weights_=True,
+            )
+
+            datafile = datadir / Path(f"{kappa}_{mom}_{rel}_fitlist_2pt_3exp.pkl")
             with open(datafile, "wb") as file_out:
                 pickle.dump(fitlist_2pt, file_out)
     return
@@ -107,7 +167,8 @@ def main():
 
     # ======================================================================
     # Read the two-point functions and fit a two-exponential function to it
-    fit_2ptfn(evxptdir, plotdir, datadir, rel="nr")
+    # fit_2ptfn(evxptdir, plotdir, datadir, rel="nr")
+    fit_2ptfn_3exp(evxptdir, plotdir, datadir, rel="nr")
     # fit_2ptfn(evxptdir, plotdir, datadir)
 
 

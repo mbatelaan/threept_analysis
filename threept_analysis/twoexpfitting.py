@@ -95,6 +95,7 @@ def fit_3ptfn_2exp(
     fit_data_list,
     src_snk_times,
     delta_t,
+    tmin_choice,
     datadir,
     ireim=0,
 ):
@@ -102,39 +103,52 @@ def fit_3ptfn_2exp(
     ireim=0: real
     ireim=1: imaginary
     """
-
-    chisq_tol = 0.01
+    tmin_choice_sigma = 4
+    weight_tol = 0.01
     fitweights_n = np.array([fit["weight"] for fit in fit_data_list[0]])
-    fitweights_n = np.where(fitweights_n > chisq_tol, fitweights_n, 0)
+    fitweights_n = np.where(fitweights_n > weight_tol, fitweights_n, 0)
     fitweights_n = fitweights_n / sum(fitweights_n)
     fitparams_n = np.array([fit["param"] for fit in fit_data_list[0]])
-    best_fit_n = fit_data_list[0][np.argmax(fitweights_n)]
-    weighted_fit_n = np.einsum("i,ijk->jk", fitweights_n, fitparams_n)
+    # best_fit_n = fit_data_list[0][np.argmax(fitweights_n)]
+    # weighted_fit_n = np.einsum("i,ijk->jk", fitweights_n, fitparams_n)
+    fit_times_n = [fit["x"] for fit in fit_data_list[0]]
+    chosen_time = np.where([times[0] == tmin_choice for times in fit_times_n])[0][0]
+    best_fit_n = fit_data_list[0][chosen_time]
+    weighted_fit_n = best_fit_n["param"]
     # print(f"{fitweights_n=}")
-    # print(np.where(fitweights_n > chisq_tol, fitweights_n, 0))
-    print(f"{best_fit_n['x']=}")
-    print(f"{best_fit_n['paramavg'][1]=}")
+    # print(np.where(fitweights_n > weight_tol, fitweights_n, 0))
+    # print(f"{best_fit_n['x']=}")
+    # print(f"{best_fit_n['paramavg'][1]=}")
     # print(f"{[i for i in best_fit_n]=}")
     # print(f"{np.average(best_fit_n['param'],axis=0)=}")
     # print(f"{np.average(weighted_fit_n,axis=0)=}")
 
     fitweights_s = np.array([fit["weight"] for fit in fit_data_list[1]])
-    # print(np.where(fitweights_s > chisq_tol, fitweights_s, 0))
-    fitweights_s = np.where(fitweights_s > chisq_tol, fitweights_s, 0)
+    # print(np.where(fitweights_s > weight_tol, fitweights_s, 0))
+    fitweights_s = np.where(fitweights_s > weight_tol, fitweights_s, 0)
     # print(f"{sum(fitweights_s)=}")
     fitweights_s = fitweights_s / sum(fitweights_s)
     fitparams_s = np.array([fit["param"] for fit in fit_data_list[1]])
-    best_fit_s = fit_data_list[1][np.argmax(fitweights_s)]
-    weighted_fit_s = np.einsum("i,ijk->jk", fitweights_s, fitparams_s)
-    print(f"{best_fit_s['paramavg'][1]=}")
+    fit_times_s = [fit["x"] for fit in fit_data_list[1]]
+    chosen_time = np.where([times[0] == tmin_choice_sigma for times in fit_times_s])[0][
+        0
+    ]
+    best_fit_s = fit_data_list[1][chosen_time]
+    weighted_fit_s = best_fit_s["param"]
+
+    # best_fit_s = fit_data_list[1][np.argmax(fitweights_s)]
+    # weighted_fit_s = np.einsum("i,ijk->jk", fitweights_s, fitparams_s)
+    # print(f"{best_fit_s['paramavg'][1]=}")
 
     # Set the parameters from the twoptfn
     A_E0i = weighted_fit_n[:, 0]
     A_E0f = weighted_fit_s[:, 0]
     E0i = weighted_fit_n[:, 1]
     E0f = weighted_fit_s[:, 1]
-    Delta_E01i = weighted_fit_n[:, 3] - weighted_fit_n[:, 1]
-    Delta_E01f = weighted_fit_s[:, 3] - weighted_fit_s[:, 1]
+    Delta_E01i = np.exp(weighted_fit_n[:, 3])
+    Delta_E01f = np.exp(weighted_fit_s[:, 3])
+    # Delta_E01i = weighted_fit_n[:, 3] - weighted_fit_n[:, 1]
+    # Delta_E01f = weighted_fit_s[:, 3] - weighted_fit_s[:, 1]
 
     fitfnc_2exp = threeptBS
 
@@ -261,46 +275,80 @@ def fit_ratio_2exp(
     fit_data_list,
     src_snk_times,
     delta_t,
+    tmin_choice,
     datadir,
 ):
     """Fit to the three-point function with a two-exponential function, which includes parameters from the two-point functions"""
-
-    chisq_tol = 0.01
+    tmin_choice_sigma = 5
+    weight_tol = 0.01
     fitweights_n = np.array([fit["weight"] for fit in fit_data_list[0]])
-    fitweights_n = np.where(fitweights_n > chisq_tol, fitweights_n, 0)
+    fitweights_n = np.where(fitweights_n > weight_tol, fitweights_n, 0)
     fitweights_n = fitweights_n / sum(fitweights_n)
     fitparams_n = np.array([fit["param"] for fit in fit_data_list[0]])
-    best_fit_n = fit_data_list[0][np.argmax(fitweights_n)]
-    best2_fit_n = fit_data_list[0][np.argsort(fitweights_n)[1]]
-    weighted_fit_n = np.einsum("i,ijk->jk", fitweights_n, fitparams_n)
+    fit_times_n = [fit["x"] for fit in fit_data_list[0]]
+    chosen_time = np.where([times[0] == tmin_choice for times in fit_times_n])[0][0]
+    # print(f"{chosen_time=}")
+    best_fit_n = fit_data_list[0][chosen_time]
+    # best_fit_n = fit_data_list[0][np.argmax(fitweights_n)]
+    # best2_fit_n = fit_data_list[0][np.argsort(fitweights_n)[1]]
+    # best3_fit_n = fit_data_list[0][np.argsort(fitweights_n)[2]]
+    # best4_fit_n = fit_data_list[0][np.argsort(fitweights_n)[3]]
+    # weighted_fit_n = np.einsum("i,ijk->jk", fitweights_n, fitparams_n)
+    weighted_fit_n = best_fit_n["param"]
     # print(f"{fitweights_n=}")
-    # print(np.where(fitweights_n > chisq_tol, fitweights_n, 0))
-    print(f"{best_fit_n['x']=}")
-    print(f"{best_fit_n['redchisq']=}")
-    print(f"{best_fit_n['paramavg'][1]=}")
-    print(f"{best2_fit_n['x']=}")
-    print(f"{best2_fit_n['redchisq']=}")
-    print(f"{best2_fit_n['paramavg'][1]=}")
+    # print(np.where(fitweights_n > weight_tol, fitweights_n, 0))
+    # print(f"{best_fit_n['x']=}")
+    # print(f"{best_fit_n['redchisq']=}")
+    # print(f"{best_fit_n['paramavg']=}")
+    # print(f"{np.average(best_fit_n['param'],axis=0)=}")
+    # print(f"{best2_fit_n['x']=}")
+    # print(f"{best2_fit_n['redchisq']=}")
+    # print(f"{best2_fit_n['paramavg']=}")
+    # print(f"{best3_fit_n['x']=}")
+    # print(f"{best3_fit_n['redchisq']=}")
+    # print(f"{best3_fit_n['paramavg']=}")
+    # print(f"{best4_fit_n['x']=}")
+    # print(f"{best4_fit_n['redchisq']=}")
+    # print(f"{best4_fit_n['paramavg']=}")
     # print(f"{[i for i in best_fit_n]=}")
     # print(f"{np.average(best_fit_n['param'],axis=0)=}")
     # print(f"{np.average(weighted_fit_n,axis=0)=}")
 
     fitweights_s = np.array([fit["weight"] for fit in fit_data_list[1]])
-    fitweights_s = np.where(fitweights_s > chisq_tol, fitweights_s, 0)
+    fitweights_s = np.where(fitweights_s > weight_tol, fitweights_s, 0)
     fitweights_s = fitweights_s / sum(fitweights_s)
     fitparams_s = np.array([fit["param"] for fit in fit_data_list[1]])
-    best_fit_s = fit_data_list[1][np.argmax(fitweights_s)]
-    weighted_fit_s = np.einsum("i,ijk->jk", fitweights_s, fitparams_s)
+    fit_times_s = [fit["x"] for fit in fit_data_list[1]]
+    chosen_time = np.where([times[0] == tmin_choice_sigma for times in fit_times_s])[0][
+        0
+    ]
+    # print(f"{chosen_time=}")
+    best_fit_s = fit_data_list[1][chosen_time]
+    # best_fit_s = fit_data_list[1][np.argmax(fitweights_s)]
+    # weighted_fit_s = np.einsum("i,ijk->jk", fitweights_s, fitparams_s)
+    weighted_fit_s = best_fit_s["param"]
+    # print(f"\n{best_fit_s['x']=}")
+    # print(f"{best_fit_s['redchisq']=}")
+    # print(f"{best_fit_s['paramavg']=}")
 
     # Set the parameters from the twoptfn
     A_E0i = weighted_fit_n[:, 0]
     A_E0f = weighted_fit_s[:, 0]
-    A_E1i = weighted_fit_n[:, 2]
-    A_E1f = weighted_fit_s[:, 2]
+    # A_E1i = weighted_fit_n[:, 2]
+    # A_E1f = weighted_fit_s[:, 2]
+    A_E1i = weighted_fit_n[:, 0] * weighted_fit_n[:, 2]
+    A_E1f = weighted_fit_s[:, 0] * weighted_fit_s[:, 2]
     E0i = weighted_fit_n[:, 1]
     E0f = weighted_fit_s[:, 1]
-    Delta_E01i = weighted_fit_n[:, 3] - weighted_fit_n[:, 1]
-    Delta_E01f = weighted_fit_s[:, 3] - weighted_fit_s[:, 1]
+    # Delta_E01i = weighted_fit_n[:, 3] - weighted_fit_n[:, 1]
+    # Delta_E01f = weighted_fit_s[:, 3] - weighted_fit_s[:, 1]
+    Delta_E01i = np.exp(weighted_fit_n[:, 3])
+    Delta_E01f = np.exp(weighted_fit_s[:, 3])
+
+    print(f"\n{np.average(E0i)=}")
+    print(f"{np.average(Delta_E01i)=}")
+    print(f"{np.average(E0f)=}")
+    print(f"{np.average(Delta_E01f)=}")
 
     fitfnc_2exp = threept_ratio
 
@@ -358,6 +406,8 @@ def fit_ratio_2exp(
     # ratio_fit_avg = fitfnc_2exp(x_avg, fit_param_avg)
     chisq = fitfunc.chisqfn(resavg.x, fitfnc_2exp, x_avg, fitdata_avg, cvinv)
     redchisq = chisq / (len(fitdata_avg) - len(p0))
+    print(f"{redchisq=}")
+    print(f"{resavg.fun/(len(fitdata_avg) - len(p0))=}")
 
     # Fit to each bootstrap
     p0 = fit_param_avg
@@ -389,10 +439,11 @@ def fit_ratio_2exp(
     ratio_fit_boot = np.array(ratio_fit_boot)
     fit_param_boot = np.array(fit_param_boot)
 
-    # chisq = fitfunc.chisqfn(
-    #     np.average(fit_param_boot, axis=0), fitfnc_2exp, x_avg, fitdata_avg, cvinv
-    # )
-    # redchisq = chisq / (len(fitdata_avg) - len(p0))
+    chisq_ = fitfunc.chisqfn(
+        np.average(fit_param_boot, axis=0), fitfnc_2exp, x_avg, fitdata_avg, cvinv
+    )
+    redchisq_ = chisq_ / (len(fitdata_avg) - len(p0))
+    print(f"{redchisq_=}")
 
     return (
         fit_param_boot,
@@ -402,6 +453,270 @@ def fit_ratio_2exp(
         best_fit_n,
         best_fit_s,
     )
+
+
+def plot_2pt_fit(
+    fit_data_list,
+    tmin_choice,
+    datadir,
+    plotdir,
+    title,
+):
+    """Plot the effective energy of the twopoint functions and their fits"""
+
+    tmin_choice_sigma = 5
+    weight_tol = 0.01
+    print([i for i in fit_data_list[0][0]])
+    fitweights_n = np.array([fit["weight"] for fit in fit_data_list[0]])
+    fitweights_n = np.where(fitweights_n > weight_tol, fitweights_n, 0)
+    fitweights_n = fitweights_n / sum(fitweights_n)
+    fitparams_n = np.array([fit["param"] for fit in fit_data_list[0]])
+    fit_times_n = [fit["x"] for fit in fit_data_list[0]]
+    chosen_time = np.where([times[0] == tmin_choice for times in fit_times_n])[0][0]
+    best_fit_n = fit_data_list[0][chosen_time]
+    weighted_fit_n = best_fit_n["param"]
+
+    fitweights_s = np.array([fit["weight"] for fit in fit_data_list[1]])
+    fitweights_s = np.where(fitweights_s > weight_tol, fitweights_s, 0)
+    fitweights_s = fitweights_s / sum(fitweights_s)
+    fitparams_s = np.array([fit["param"] for fit in fit_data_list[1]])
+    fit_times_s = [fit["x"] for fit in fit_data_list[1]]
+    chosen_time = np.where([times[0] == tmin_choice_sigma for times in fit_times_s])[0][
+        0
+    ]
+    best_fit_s = fit_data_list[1][chosen_time]
+    weighted_fit_s = best_fit_s["param"]
+
+    time = np.arange(64)
+    efftime = np.arange(63)
+
+    # ======================================================================
+    # Plot the fit parameters for neutron
+    # print(best_fit_n["fitfunction"])
+    fit_tmin_n = [fit["x"][0] for fit in fit_data_list[0]]
+    energies_n = np.array([fit["param"][:, 1::2] for fit in fit_data_list[0]])
+    energies_n_avg = np.average(energies_n, axis=1)
+    energies_n_std = np.std(energies_n, axis=1)
+    energy_1_n = energies_n[:, :, 0] + np.exp(energies_n[:, :, 1])
+    energy_2_n = (
+        energies_n[:, :, 0] + np.exp(energies_n[:, :, 1]) + np.exp(energies_n[:, :, 2])
+    )
+
+    priors = best_fit_n["prior"][1::2]
+    priors_std = best_fit_n["priorsigma"][1::2]
+
+    prior_1_n = priors[0] + np.exp(priors[1])
+    print(f"{priors_std[1]=}")
+    prior_1_n_min = priors[0] + np.exp(priors[1] - priors_std[1])
+    prior_1_n_max = priors[0] + np.exp(priors[1] + priors_std[1])
+    # prior_1_n_min = priors[0] + np.exp(priors[1] - 0.5)
+    # prior_1_n_max = priors[0] + np.exp(priors[1] + 0.5)
+
+    plt.figure(figsize=(6, 6))
+    plt.errorbar(
+        fit_tmin_n,
+        energies_n_avg[:, 0],
+        energies_n_std[:, 0],
+        elinewidth=1,
+        color=_colors[0],
+        fmt="s",
+        label=r"$E_0$",
+    )
+    plt.errorbar(
+        fit_tmin_n,
+        np.average(energy_1_n, axis=1),
+        np.std(energy_1_n, axis=1),
+        elinewidth=1,
+        color=_colors[1],
+        fmt="s",
+        label=r"$E_1$",
+    )
+    plt.errorbar(
+        fit_tmin_n,
+        np.average(energy_2_n, axis=1),
+        np.std(energy_2_n, axis=1),
+        elinewidth=1,
+        color=_colors[2],
+        fmt="s",
+        label=r"$E_2$",
+    )
+    plt.fill_between(
+        fit_tmin_n,
+        np.array([priors[0]] * len(fit_tmin_n))
+        - np.array([priors_std[0]] * len(fit_tmin_n)),
+        np.array([priors[0]] * len(fit_tmin_n))
+        + np.array([priors_std[0]] * len(fit_tmin_n)),
+        alpha=0.3,
+        linewidth=0,
+        color=_colors[0],
+    )
+    plt.fill_between(
+        fit_tmin_n,
+        np.array([prior_1_n_min] * len(fit_tmin_n)),
+        np.array([prior_1_n_max] * len(fit_tmin_n)),
+        alpha=0.3,
+        linewidth=0,
+        color=_colors[1],
+    )
+    plt.legend()
+    plt.ylim(0, 1.5)
+    plt.xlabel(r"$t_{\textrm{min}}$")
+    plt.ylabel(r"$E_i$")
+    savefile = plotdir / Path(f"twopoint/{title}_energies_n.pdf")
+    savefile.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(savefile)
+    # plt.show()
+    plt.close()
+
+    # ======================================================================
+    # Plot the fit parameters for sigma
+    # print(best_fit_s["fitfunction"])
+    fit_tmin_s = [fit["x"][0] for fit in fit_data_list[1]]
+    energies_s = np.array([fit["param"][:, 1::2] for fit in fit_data_list[1]])
+    energies_s_avg = np.average(energies_s, axis=1)
+    energies_s_std = np.std(energies_s, axis=1)
+    energy_1_s = energies_s[:, :, 0] + np.exp(energies_s[:, :, 1])
+    energy_2_s = (
+        energies_s[:, :, 0] + np.exp(energies_s[:, :, 1]) + np.exp(energies_s[:, :, 2])
+    )
+
+    priors = best_fit_s["prior"][1::2]
+    priors_std = best_fit_s["priorsigma"][1::2]
+
+    prior_1_s = priors[0] + np.exp(priors[1])
+    print(f"{prior_1_s=}")
+    prior_1_s_min = priors[0] + np.exp(priors[1] - priors_std[1])
+    prior_1_s_max = priors[0] + np.exp(priors[1] + priors_std[1])
+    # prior_1_s_min = priors[0] + np.exp(priors[1] - 0.5)
+    # prior_1_s_max = priors[0] + np.exp(priors[1] + 0.5)
+
+    plt.figure(figsize=(6, 6))
+    plt.errorbar(
+        fit_tmin_s,
+        energies_s_avg[:, 0],
+        energies_s_std[:, 0],
+        elinewidth=1,
+        color=_colors[0],
+        fmt="s",
+        label=r"$E_0$",
+    )
+    plt.errorbar(
+        fit_tmin_s,
+        np.average(energy_1_s, axis=1),
+        np.std(energy_1_s, axis=1),
+        elinewidth=1,
+        color=_colors[1],
+        fmt="s",
+        label=r"$E_1$",
+    )
+    plt.errorbar(
+        fit_tmin_s,
+        np.average(energy_2_s, axis=1),
+        np.std(energy_2_s, axis=1),
+        elinewidth=1,
+        color=_colors[2],
+        fmt="s",
+        label=r"$E_2$",
+    )
+    plt.fill_between(
+        fit_tmin_s,
+        np.array([priors[0]] * len(fit_tmin_s))
+        - np.array([priors_std[0]] * len(fit_tmin_s)),
+        np.array([priors[0]] * len(fit_tmin_s))
+        + np.array([priors_std[0]] * len(fit_tmin_s)),
+        alpha=0.3,
+        linewidth=0,
+        color=_colors[0],
+    )
+    plt.fill_between(
+        fit_tmin_s,
+        np.array([prior_1_s_min] * len(fit_tmin_s)),
+        np.array([prior_1_s_max] * len(fit_tmin_s)),
+        alpha=0.3,
+        linewidth=0,
+        color=_colors[1],
+    )
+    plt.legend()
+    plt.ylim(0, 1.5)
+    plt.xlabel(r"$t_{\textrm{min}}$")
+    plt.ylabel(r"$E_i$")
+    savefile = plotdir / Path(f"twopoint/p+0+0+0_energies_s.pdf")
+    savefile.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(savefile)
+    # plt.show()
+    plt.close()
+
+    fitfunction = fitfunc.initffncs("Threeexp_log").eval
+
+    # ======================================================================
+    # nucleon fit
+    eff_energy_n = stats.bs_effmass(best_fit_n["y"], time_axis=1, spacing=1)
+    fit_result = np.array(
+        [fitfunction(best_fit_n["x"], fitparam) for fitparam in best_fit_n["param"]]
+    )
+    fit_result_eff_energy_n = stats.bs_effmass(fit_result)
+
+    plt.figure(figsize=(6, 6))
+    plt.errorbar(
+        efftime,
+        np.average(eff_energy_n, axis=0),
+        np.std(eff_energy_n, axis=0),
+        elinewidth=1,
+        color=_colors[0],
+        fmt="s",
+    )
+    plt.xlim(0, 30)
+    plt.ylim(0, 1)
+    plt.plot(best_fit_n["x"][:-1], np.average(fit_result_eff_energy_n, axis=0))
+    plt.fill_between(
+        best_fit_n["x"][:-1],
+        np.average(fit_result_eff_energy_n, axis=0)
+        - np.std(fit_result_eff_energy_n, axis=0),
+        np.average(fit_result_eff_energy_n, axis=0)
+        + np.std(fit_result_eff_energy_n, axis=0),
+        label=f"chi-squared = {best_fit_n['redchisq']:.2f}",
+    )
+    plt.legend()
+    savefile = plotdir / Path(f"twopoint/{title}_bestfit_n.pdf")
+    savefile.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(savefile)
+    plt.close()
+
+    # ======================================================================
+    # sigma fit
+    eff_energy_s = stats.bs_effmass(best_fit_s["y"], time_axis=1, spacing=1)
+    fit_result = np.array(
+        [fitfunction(best_fit_s["x"], fitparam) for fitparam in best_fit_s["param"]]
+    )
+    fit_result_eff_energy_s = stats.bs_effmass(fit_result)
+
+    plt.figure(figsize=(6, 6))
+    plt.errorbar(
+        efftime,
+        np.average(eff_energy_s, axis=0),
+        np.std(eff_energy_s, axis=0),
+        elinewidth=1,
+        color=_colors[0],
+        fmt="s",
+    )
+    plt.xlim(0, 30)
+    plt.ylim(0, 1)
+    plt.plot(best_fit_s["x"][:-1], np.average(fit_result_eff_energy_s, axis=0))
+    plt.fill_between(
+        best_fit_s["x"][:-1],
+        np.average(fit_result_eff_energy_s, axis=0)
+        - np.std(fit_result_eff_energy_s, axis=0),
+        np.average(fit_result_eff_energy_s, axis=0)
+        + np.std(fit_result_eff_energy_s, axis=0),
+        label=f"chi-squared = {best_fit_s['redchisq']:.2f}",
+    )
+    plt.legend()
+    savefile = plotdir / Path(f"twopoint/p+0+0+0_bestfit_s.pdf")
+    savefile.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(savefile)
+    plt.close()
+
+    return
 
 
 def make_mat_elements(fit_params, datadir):
@@ -420,15 +735,15 @@ def make_mat_elements(fit_params, datadir):
     with open(datafile_s, "rb") as file_in:
         fit_data_s = pickle.load(file_in)
 
-    chisq_tol = 0.01
+    weight_tol = 0.01
     fitweights_n = np.array([fit["weight"] for fit in fit_data_n])
-    fitweights_n = np.where(fitweights_n > chisq_tol, fitweights_n, 0)
+    fitweights_n = np.where(fitweights_n > weight_tol, fitweights_n, 0)
     fitweights_n = fitweights_n / sum(fitweights_n)
     fitparams_n = np.array([fit["param"] for fit in fit_data_n])
     weighted_fit_n = np.einsum("i,ijk->jk", fitweights_n, fitparams_n)
 
     fitweights_s = np.array([fit["weight"] for fit in fit_data_s])
-    fitweights_s = np.where(fitweights_s > chisq_tol, fitweights_s, 0)
+    fitweights_s = np.where(fitweights_s > weight_tol, fitweights_s, 0)
     fitweights_s = fitweights_s / sum(fitweights_s)
     fitparams_s = np.array([fit["param"] for fit in fit_data_s])
     weighted_fit_s = np.einsum("i,ijk->jk", fitweights_s, fitparams_s)
@@ -443,7 +758,7 @@ def make_mat_elements(fit_params, datadir):
         with open(datafile_n, "rb") as file_in:
             fit_data_n = pickle.load(file_in)
         fitweights_n = np.array([fit["weight"] for fit in fit_data_n])
-        fitweights_n = np.where(fitweights_n > chisq_tol, fitweights_n, 0)
+        fitweights_n = np.where(fitweights_n > weight_tol, fitweights_n, 0)
         fitweights_n = fitweights_n / sum(fitweights_n)
         fitparams_n = np.array([fit["param"] for fit in fit_data_n])
         weighted_fit_n = np.einsum("i,ijk->jk", fitweights_n, fitparams_n)
@@ -1098,9 +1413,9 @@ def main():
     # ======================================================================
     # Read in the three point function data
     operators_tex = [
-        "$\gamma_1$",
-        "$\gamma_2$",
-        "$\gamma_3$",
+        # "$\gamma_1$",
+        # "$\gamma_2$",
+        # "$\gamma_3$",
         "$\gamma_4$",
         # "g5",
         # "g51",
@@ -1116,9 +1431,9 @@ def main():
         # "gI",
     ]
     operators = [
-        "g0",
-        "g1",
-        "g2",
+        # "g0",
+        # "g1",
+        # "g2",
         "g3",
         # "g5",
         # "g51",
@@ -1133,13 +1448,17 @@ def main():
         # "g25",
         # "gI",
     ]
-    # polarizations = ["UNPOL"]
-    polarizations = ["UNPOL", "POL"]
+    polarizations = ["UNPOL"]
+    # polarizations = ["UNPOL", "POL"]
     momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
+    # momenta = ["p+1+0+0", "p+1+1+0"]
     # momenta = ["p+0+0+0", "p-1+0+0", "p-1-1+0"]
     src_snk_times = np.array([10, 13, 16])
     rel = "nr"  #'rel'
-    delta_t = 4
+    delta_t_list = [5, 5, 5]
+    # tmin_choice = [3, 3, 3]
+    # tmin_choice = [5, 5, 5]
+    tmin_choice = [6, 5, 4]
 
     for imom, mom in enumerate(momenta):
         print(f"\n{mom}")
@@ -1262,13 +1581,19 @@ def main():
                     "kp120620kp121040",
                     "kp120620kp120620",
                 ]
+                # datafile_n = datadir / Path(
+                #     f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt.pkl"
+                # )
                 datafile_n = datadir / Path(
-                    f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt.pkl"
+                    f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt_3exp.pkl"
                 )
                 with open(datafile_n, "rb") as file_in:
                     fit_data_n = pickle.load(file_in)
+                # datafile_s = datadir / Path(
+                #     f"{kappa_combs[1]}_p+0+0+0_{rel}_fitlist_2pt.pkl"
+                # )
                 datafile_s = datadir / Path(
-                    f"{kappa_combs[1]}_p+0+0+0_{rel}_fitlist_2pt.pkl"
+                    f"{kappa_combs[1]}_p+0+0+0_{rel}_fitlist_2pt_3exp.pkl"
                 )
                 with open(datafile_s, "rb") as file_in:
                     fit_data_s = pickle.load(file_in)
@@ -1276,7 +1601,7 @@ def main():
                 for ir, reim in enumerate(["real", "imag"]):
                     print(reim)
                     # ======================================================================
-                    # fit to the three-point function with a two-exponential function
+                    # # fit to the three-point function with a two-exponential function
                     # (
                     #     fit_param_boot,
                     #     fit_ratio_boot,
@@ -1290,7 +1615,8 @@ def main():
                     #     np.array([twoptfn_neutron, twoptfn_sigma]),
                     #     np.array([fit_data_n, fit_data_s]),
                     #     src_snk_times,
-                    #     delta_t,
+                    #     delta_t_list[imom],
+                    #     tmin_choice[imom],
                     #     datadir,
                     #     ir,
                     # )
@@ -1312,7 +1638,17 @@ def main():
                     # print(f"{np.shape(fit_param_boot)=}")
 
                     # ======================================================================
+                    plot_2pt_fit(
+                        np.array([fit_data_n, fit_data_s]),
+                        tmin_choice[imom],
+                        datadir,
+                        plotdir,
+                        title=f"{mom}",
+                    )
+                    # exit()
+                    # ======================================================================
                     # fit to the ratio of 3pt and 2pt functions with a two-exponential function
+
                     (
                         fit_param_ratio_boot,
                         ratio_fit_boot,
@@ -1325,7 +1661,8 @@ def main():
                         np.array([twoptfn_neutron, twoptfn_sigma]),
                         np.array([fit_data_n, fit_data_s]),
                         src_snk_times,
-                        delta_t,
+                        delta_t_list[imom],
+                        tmin_choice[imom],
                         datadir,
                     )
                     fit_params_ratio = [
@@ -1347,7 +1684,7 @@ def main():
                     # plot_all_fitratios(
                     #     simple_ratio_list[:, :, :, ir],
                     #     fit_ratio_boot,
-                    #     delta_t,
+                    #     delta_t_list[imom],
                     #     src_snk_times,
                     #     redchisq,
                     #     fit_param_boot,
@@ -1360,7 +1697,7 @@ def main():
                     #     full_ratio_list_reim[ir],
                     #     threept_fit_boot,
                     #     [best_fit_n, best_fit_s],
-                    #     delta_t,
+                    #     delta_t_list[imom],
                     #     src_snk_times,
                     #     redchisq,
                     #     fit_param_boot,
@@ -1374,7 +1711,7 @@ def main():
                     plot_ratio_fit(
                         full_ratio_list_reim[ir],
                         ratio_fit_boot,
-                        delta_t,
+                        delta_t_list[imom],
                         src_snk_times,
                         redchisq_ratio,
                         fit_param_ratio_boot,
