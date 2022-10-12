@@ -1746,9 +1746,9 @@ def main():
     # ======================================================================
     # Read in the three point function data
     operators_tex = [
-        # "$\gamma_1$",
-        # "$\gamma_2$",
-        # "$\gamma_3$",
+        "$\gamma_1$",
+        "$\gamma_2$",
+        "$\gamma_3$",
         "$\gamma_4$",
         # "g5",
         # "g51",
@@ -1764,9 +1764,9 @@ def main():
         # "gI",
     ]
     operators = [
-        # "g0",
-        # "g1",
-        # "g2",
+        "g0",
+        "g1",
+        "g2",
         "g3",
         # "g5",
         # "g51",
