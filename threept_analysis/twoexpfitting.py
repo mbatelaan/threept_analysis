@@ -1806,9 +1806,18 @@ def main():
     ]
     polarizations = ["UNPOL", "POL"]
     momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
-    delta_t_list = [5, 4, 4]
-    tmin_choice = [5, 4, 4]
+    delta_t_list = [5, 5, 5]
+    tmin_choice = [5, 7, 7]
 
+    # ======================================================================
+    # Calculate the Q^2 values for each of the n2sig and sig2n transitions and momenta
+    # Then save these to a file.
+    Qsquared_values_sig2n, Qsquared_values_n2sig = get_Qsquared_values(
+        datadir, tmin_choice, tmin_choice
+    )
+    print(f"{Qsquared_values_sig2n=}")
+    print(f"{Qsquared_values_n2sig=}")
+    exit()
     # ======================================================================
     # Construct a ratio with two 3pt functions and fit it for the zero momentum transfer case
     operators = ["g3"]
@@ -1845,9 +1854,9 @@ def main():
     ]
     polarizations = ["UNPOL", "POL"]
     momenta = ["p+1+0+0", "p+1+1+0"]
-    delta_t_list = [5, 5]
-    tmin_choice = [7, 7]
-    tmin_choice_zero = 5
+    # delta_t_list = [5, 5]
+    # tmin_choice = [7, 7]
+    # tmin_choice_zero = 5
     fit_3point_loop_sig2n(
         latticedir,
         resultsdir,
@@ -1857,9 +1866,9 @@ def main():
         operators_tex,
         polarizations,
         momenta,
-        delta_t_list,
-        tmin_choice,
-        tmin_choice_zero,
+        delta_t_list[1:],
+        tmin_choice[1:],
+        tmin_choice[0],
     )
 
     # ======================================================================
@@ -1873,9 +1882,9 @@ def main():
         operators_tex,
         polarizations,
         momenta,
-        delta_t_list,
-        tmin_choice,
-        tmin_choice_zero,
+        delta_t_list[1:],
+        tmin_choice[1:],
+        tmin_choice[0],
     )
 
     # polarizations = ["UNPOL", "POL"]
@@ -2343,41 +2352,116 @@ def fit_3point_loop_sig2n(
     return
 
 
-def get_Qsquared_values(
-    latticedir,
-    resultsdir,
-    plotdir,
-    datadir,
-    operators,
-    operators_tex,
-    polarizations,
-    momenta,
-    delta_t_list,
-    tmin_choice,
-    tmin_choice_zero,
-):
+def get_Qsquared_values(datadir, tmin_choices_nucl, tmin_choices_sigm):
     """Loop over the momenta and read the two-point functions, then get the energies from them and use those to calculate the Q^2 values."""
 
+    a = 0.074
+    L = 32
     src_snk_times = np.array([10, 13, 16])
     rel = "nr"
+    kappa_combs = ["kp121040kp121040", "kp121040kp120620"]
+    momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
+    momenta_values = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0]])
+
+    # Load the fit values for the Q^2=0 correlators
+    datafile_n = datadir / Path(
+        f"{kappa_combs[0]}_{momenta[0]}_{rel}_fitlist_2pt_2exp.pkl"
+    )
+    with open(datafile_n, "rb") as file_in:
+        fit_data_n_mom0 = pickle.load(file_in)
+    datafile_s = datadir / Path(
+        f"{kappa_combs[1]}_{momenta[0]}_{rel}_fitlist_2pt_2exp.pkl"
+    )
+    with open(datafile_s, "rb") as file_in:
+        fit_data_s_mom0 = pickle.load(file_in)
+
+    # Extract the chosen fit's energy from the data
+    # Neutron
+    fit_times_n = [fit["x"] for fit in fit_data_n_mom0]
+    chosen_time_n = np.where(
+        [times[0] == tmin_choices_nucl[0] for times in fit_times_n]
+    )[0][0]
+    best_fit_n_mom0 = fit_data_n_mom0[chosen_time_n]
+    energy_n_mom0 = np.average(best_fit_n_mom0["param"][:, 1])
+    # Sigma
+    fit_times_s = [fit["x"] for fit in fit_data_s_mom0]
+    chosen_time_s = np.where(
+        [times[0] == tmin_choices_sigm[0] for times in fit_times_s]
+    )[0][0]
+    best_fit_s_mom0 = fit_data_s_mom0[chosen_time_s]
+    energy_s_mom0 = np.average(best_fit_s_mom0["param"][:, 1])
+
+    qsquared_sig2n_list = []
+    qsquared_n2sig_list = []
     for imom, mom in enumerate(momenta):
-        kappa_combs = [
-            "kp121040kp121040",
-            "kp121040kp120620",
-        ]
+        # Load the fit values for correlators at the given momentum
         datafile_n = datadir / Path(
             f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
         )
         with open(datafile_n, "rb") as file_in:
             fit_data_n = pickle.load(file_in)
-
         datafile_s = datadir / Path(
             f"{kappa_combs[1]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
         )
         with open(datafile_s, "rb") as file_in:
             fit_data_s = pickle.load(file_in)
 
-    return
+        # Extract the chosen fit's energy from the data
+        # Neutron
+        fit_times_n = [fit["x"] for fit in fit_data_n]
+        chosen_time_n = np.where(
+            [times[0] == tmin_choices_nucl[imom] for times in fit_times_n]
+        )[0][0]
+        best_fit_n = fit_data_n[chosen_time_n]
+        energy_n = np.average(best_fit_n["param"][:, 1])
+        # Sigma
+        fit_times_s = [fit["x"] for fit in fit_data_s]
+        chosen_time_s = np.where(
+            [times[0] == tmin_choices_sigm[imom] for times in fit_times_s]
+        )[0][0]
+        best_fit_s = fit_data_s[chosen_time_s]
+        energy_s = np.average(best_fit_s["param"][:, 1])
+
+        sig2n_Qsq = Q_squared_energies(
+            energy_s, energy_n_mom0, momenta_values[imom], momenta_values[0], L, a
+        )
+        n2sig_Qsq = Q_squared_energies(
+            energy_n, energy_s_mom0, momenta_values[imom], momenta_values[0], L, a
+        )
+        qsquared_sig2n_list.append(sig2n_Qsq)
+        qsquared_n2sig_list.append(n2sig_Qsq)
+        print(f"{sig2n_Qsq=}")
+        print(f"{n2sig_Qsq=}")
+
+    qsquared_sig2n_list = np.array(qsquared_sig2n_list)
+    qsquared_n2sig_list = np.array(qsquared_n2sig_list)
+
+    # Save the data to a file
+    datafile_sig2n = datadir / Path(f"Qsquared_sig2n.pkl")
+    datafile_n2sig = datadir / Path(f"Qsquared_n2sig.pkl")
+    with open(datafile_sig2n, "wb") as file_out:
+        pickle.dump(qsquared_sig2n_list, file_out)
+    with open(datafile_n2sig, "wb") as file_out:
+        pickle.dump(qsquared_n2sig_list, file_out)
+
+    return qsquared_sig2n_list, qsquared_n2sig_list
+
+
+def Q_squared_energies(E1, E2, n1, n2, L, a):
+    """Returns Q^2 between two particles with momentum and twisted BC's
+    n1, n2 are arrays which contain the fourier momenta for the first and second particle.
+    L is the spatial lattice extent
+    a is the lattice spacing
+    """
+    energydiff = np.sqrt(E2**2) - np.sqrt(E1**2)
+    qvector_diff = ((2 * n2) - (2 * n1)) * (np.pi / L)
+    Qsquared = (
+        -1
+        * (energydiff**2 - np.dot(qvector_diff, qvector_diff))
+        * (0.1973**2)
+        / (a**2)
+    )
+    return Qsquared
 
 
 def fit_3point_zeromom(
@@ -2504,10 +2588,7 @@ def fit_3point_zeromom(
                 # ======================================================================
                 # Read the results of the fit to the two-point functions
 
-                kappa_combs = [
-                    "kp121040kp121040",
-                    "kp121040kp120620",
-                ]
+                kappa_combs = ["kp121040kp121040", "kp121040kp120620"]
                 datafile_n = datadir / Path(
                     f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
                 )
@@ -2664,10 +2745,7 @@ def plot_3point_loop(
 
                 # ======================================================================
                 # Read the results of the fit to the two-point functions
-                kappa_combs = [
-                    "kp121040kp121040",
-                    "kp121040kp120620",
-                ]
+                kappa_combs = ["kp121040kp121040", "kp121040kp120620"]
                 datafile_n = datadir / Path(
                     f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
                 )
