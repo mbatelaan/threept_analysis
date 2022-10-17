@@ -1703,18 +1703,21 @@ def plot_ratio_fit_paper(
         axarr[icorr].label_outer()
         # axarr[icorr].set_xlim(-src_snk_times[-1] - 1, src_snk_times[-1] + 1)
         axarr[icorr].set_xlim(plot_time2[0] - 0.5, plot_time2[src_snk_times[-1]] + 0.5)
-        axarr[icorr].set_ylim(1.104, 1.181)
+        # axarr[icorr].set_ylim(1.104, 1.181)
 
     # f.suptitle(
     #     rf"{plotparam[3]} 3-point function ratio with $\hat{{\mathcal{{O}}}}=${plotparam[1]}, $\Gamma = ${plotparam[2]}, $\vec{{q}}\, ={plotparam[0][1:]}$ with two-state fit $\chi^2_{{\mathrm{{dof}}}}={redchisq:.2f}$"
     # )
     savefile = plotdir / Path(f"{title}.pdf")
+    # savefile_ylim = plotdir / Path(f"{title}_ylim.pdf")
     savefile2 = plotdir / Path(f"{title}.png")
     savefile3 = plotdir / Path(f"{title}_small.png")
     savefile.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(savefile)
-    plt.savefig(savefile2, dpi=500)
-    plt.savefig(savefile3, dpi=50)
+    # plt.savefig(savefile2, dpi=500)
+    plt.savefig(savefile3, dpi=100)
+    # plt.ylim(1.104, 1.181)
+    # plt.savefig(savefile_ylim)
     # plt.show()
     plt.close()
     return
@@ -1785,11 +1788,6 @@ def main():
     plotdir2.mkdir(parents=True, exist_ok=True)
     datadir.mkdir(parents=True, exist_ok=True)
 
-    # # ======================================================================
-    # # Make plots of the evxpt data to compare
-    # evxpt_data(latticedir, resultsdir, plotdir, datadir)
-    # # ======================================================================
-
     # ======================================================================
     # Read in the three point function data
     operators_tex = [
@@ -1807,7 +1805,8 @@ def main():
     polarizations = ["UNPOL", "POL"]
     momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
     delta_t_list = [5, 5, 5]
-    tmin_choice = [5, 7, 7]
+    # tmin_choice = [5, 5, 5]
+    tmin_choice = [7, 7, 7]
 
     # ======================================================================
     # Calculate the Q^2 values for each of the n2sig and sig2n transitions and momenta
@@ -1815,94 +1814,90 @@ def main():
     Qsquared_values_sig2n, Qsquared_values_n2sig = get_Qsquared_values(
         datadir, tmin_choice, tmin_choice
     )
-    print(f"{Qsquared_values_sig2n=}")
-    print(f"{Qsquared_values_n2sig=}")
-    exit()
-    # ======================================================================
-    # Construct a ratio with two 3pt functions and fit it for the zero momentum transfer case
-    operators = ["g3"]
-    operators_tex = ["$\gamma_4$"]
-    polarizations = ["UNPOL"]
-    momenta = ["p+0+0+0"]
-    fit_3point_zeromom(
-        latticedir,
-        resultsdir,
-        plotdir,
-        datadir,
-        operators,
-        operators_tex,
-        polarizations,
-        momenta,
-        delta_t_list,
-        tmin_choice,
-    )
 
-    exit()
-    # ======================================================================
-    # Construct a ratio with 3pt and 2pt functions and fit it for the sigma to neutron transition
-    operators_tex = [
-        "$\gamma_1$",
-        "$\gamma_2$",
-        "$\gamma_3$",
-        "$\gamma_4$",
-    ]
-    operators = [
-        "g0",
-        "g1",
-        "g2",
-        "g3",
-    ]
-    polarizations = ["UNPOL", "POL"]
-    momenta = ["p+1+0+0", "p+1+1+0"]
-    # delta_t_list = [5, 5]
-    # tmin_choice = [7, 7]
-    # tmin_choice_zero = 5
-    fit_3point_loop_sig2n(
-        latticedir,
-        resultsdir,
-        plotdir,
-        datadir,
-        operators,
-        operators_tex,
-        polarizations,
-        momenta,
-        delta_t_list[1:],
-        tmin_choice[1:],
-        tmin_choice[0],
-    )
+    fit = False
+    if fit:
+        # ======================================================================
+        # Construct a ratio with two 3pt functions and fit it for the zero momentum transfer case
+        operators_0 = ["g3"]
+        operators_tex_0 = ["$\gamma_4$"]
+        polarizations_0 = ["UNPOL"]
+        momenta_0 = ["p+0+0+0"]
+        fit_3point_zeromom(
+            latticedir,
+            resultsdir,
+            plotdir,
+            datadir,
+            operators_0,
+            operators_tex_0,
+            polarizations_0,
+            momenta_0,
+            delta_t_list,
+            tmin_choice,
+        )
 
-    # ======================================================================
-    # Construct a ratio with 3pt and 2pt functions and fit it for the neutron to sigma transition
-    fit_3point_loop_n2sig(
-        latticedir,
-        resultsdir,
-        plotdir,
-        datadir,
-        operators,
-        operators_tex,
-        polarizations,
-        momenta,
-        delta_t_list[1:],
-        tmin_choice[1:],
-        tmin_choice[0],
-    )
+        # ======================================================================
+        # Construct a ratio with 3pt and 2pt functions and fit it for the sigma to neutron transition
+        # Only for non-zero momentum
+        fit_3point_loop_sig2n(
+            latticedir,
+            resultsdir,
+            plotdir,
+            datadir,
+            operators,
+            operators_tex,
+            polarizations,
+            momenta[1:],
+            delta_t_list[1:],
+            tmin_choice[1:],
+            tmin_choice[0],
+        )
 
-    # polarizations = ["UNPOL", "POL"]
-    # momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
-    # delta_t_list = [5, 4, 4]
-    # tmin_choice = [5, 4, 4]
-    # plot_3point_loop(
-    #     latticedir,
-    #     resultsdir,
-    #     plotdir,
-    #     datadir,
-    #     operators,
-    #     operators_tex,
-    #     polarizations,
-    #     momenta,
-    #     delta_t_list,
-    #     tmin_choice,
-    # )
+        # ======================================================================
+        # Construct a ratio with 3pt and 2pt functions and fit it for the neutron to sigma transition
+        # Only for non-zero momentum
+        fit_3point_loop_n2sig(
+            latticedir,
+            resultsdir,
+            plotdir,
+            datadir,
+            operators,
+            operators_tex,
+            polarizations,
+            momenta[1:],
+            delta_t_list[1:],
+            tmin_choice[1:],
+            tmin_choice[0],
+        )
+    else:
+        # ======================================================================
+        # plot the results of the three-point fn ratio fits
+        plot_3point_loop_sig2n(
+            latticedir,
+            resultsdir,
+            plotdir,
+            datadir,
+            operators,
+            operators_tex,
+            polarizations,
+            momenta[1:],
+            delta_t_list[1:],
+            tmin_choice[1:],
+            tmin_choice[0],
+        )
+        plot_3point_loop_n2sig(
+            latticedir,
+            resultsdir,
+            plotdir,
+            datadir,
+            operators,
+            operators_tex,
+            polarizations,
+            momenta[1:],
+            delta_t_list[1:],
+            tmin_choice[1:],
+            tmin_choice[0],
+        )
 
     return
 
@@ -2034,53 +2029,6 @@ def fit_3point_loop_n2sig(
                 for ir, reim in enumerate(["real", "imag"]):
                     print(reim)
                     # ======================================================================
-                    # # fit to the three-point function with a two-exponential function
-                    # (
-                    #     fit_param_boot,
-                    #     fit_ratio_boot,
-                    #     threept_fit_boot,
-                    #     fit_param_avg,
-                    #     redchisq,
-                    #     best_fit_n,
-                    #     best_fit_s,
-                    # ) = fit_3ptfn_2exp(
-                    #     np.array([threeptfn_t10, threeptfn_t13, threeptfn_t16]),
-                    #     np.array([twoptfn_neutron, twoptfn_sigma]),
-                    #     [fit_data_n, fit_data_s],
-                    #     src_snk_times,
-                    #     delta_t_list[imom],
-                    #     tmin_choice[imom],
-                    #     datadir,
-                    #     ir,
-                    # )
-                    # fit_params = [
-                    #     fit_param_boot,
-                    #     fit_ratio_boot,
-                    #     fit_param_avg,
-                    #     redchisq,
-                    # ]
-
-                    # # Save the fit results to pickle files
-                    # datafile = datadir / Path(
-                    #     f"{mom}_{operator}_{pol}_{rel}_{reim}_3pt_fit.pkl"
-                    # )
-                    # with open(datafile, "wb") as file_out:
-                    #     pickle.dump(fit_params, file_out)
-
-                    # print(f"{np.average(fit_param_boot, axis=0)=}")
-                    # print(f"{np.shape(fit_param_boot)=}")
-
-                    # ======================================================================
-                    # plot_2pt_fit(
-                    #     [fit_data_n, fit_data_s],
-                    #     tmin_choice[imom],
-                    #     datadir,
-                    #     plotdir,
-                    #     title=f"{mom}",
-                    # )
-                    # exit()
-
-                    # ======================================================================
                     # fit to the ratio of 3pt and 2pt functions with a two-exponential function
                     fitfnc_2exp = threept_ratio
                     (
@@ -2118,65 +2066,6 @@ def fit_3point_loop_n2sig(
                         pickle.dump(fit_params_ratio, file_out)
 
                     # ======================================================================
-                    # fit to the ratio of 3pt and 2pt functions with a three-exponential function
-                    # (
-                    #     fit_param_ratio_boot,
-                    #     ratio_fit_boot,
-                    #     fit_param_ratio_avg,
-                    #     redchisq_ratio,
-                    #     best_fit_n,
-                    #     best_fit_s,
-                    # ) = fit_ratio_3exp(
-                    #     full_ratio_list_reim[ir],
-                    #     np.array([twoptfn_neutron, twoptfn_sigma]),
-                    #     [fit_data_n, fit_data_s],
-                    #     src_snk_times,
-                    #     delta_t_list[imom],
-                    #     tmin_choice[imom],
-                    #     datadir,
-                    # )
-                    # fit_params_ratio = [
-                    #     fit_param_ratio_boot,
-                    #     ratio_fit_boot,
-                    #     fit_param_ratio_avg,
-                    #     redchisq_ratio,
-                    # ]
-
-                    # # Save the fit results to pickle files
-                    # datafile_ratio = datadir / Path(
-                    #     f"{mom}_{operator}_{pol}_{rel}_{reim}_3pt_ratio_3exp_fit.pkl"
-                    # )
-                    # with open(datafile_ratio, "wb") as file_out:
-                    #     pickle.dump(fit_params_ratio, file_out)
-
-                    # ======================================================================
-                    # Plot the results of the fit to the 3pt function against a ratio of the data.
-                    # plot_all_fitratios(
-                    #     simple_ratio_list[:, :, :, ir],
-                    #     fit_ratio_boot,
-                    #     delta_t_list[imom],
-                    #     src_snk_times,
-                    #     redchisq,
-                    #     fit_param_boot,
-                    #     plotdir,
-                    #     [mom, operators_tex[iop], pol, reim],
-                    #     title=f"{mom}/{pol}/fit_ratios_{reim}_{operator}",
-                    # )
-
-                    # plot_full_fitratios(
-                    #     full_ratio_list_reim[ir],
-                    #     threept_fit_boot,
-                    #     [best_fit_n, best_fit_s],
-                    #     delta_t_list[imom],
-                    #     src_snk_times,
-                    #     redchisq,
-                    #     fit_param_boot,
-                    #     plotdir,
-                    #     [mom, operators_tex[iop], pol, reim],
-                    #     title=f"{mom}/{pol}/fit_ratios_{reim}_{operator}",
-                    # )
-
-                    # ======================================================================
                     # Plot the results of the fit to the ratio
                     plot_ratio_fit(
                         full_ratio_list_reim[ir],
@@ -2189,6 +2078,18 @@ def fit_3point_loop_n2sig(
                         [mom, operators_tex[iop], pol, reim],
                         title=f"{mom}/{pol}/ratio_fit_{reim}_{operator}_n2sig",
                     )
+                    plot_ratio_fit_paper(
+                        full_ratio_list_reim[ir],
+                        ratio_fit_boot,
+                        delta_t_list[imom],
+                        src_snk_times,
+                        redchisq_ratio,
+                        fit_param_ratio_boot,
+                        plotdir,
+                        [mom, operators_tex[iop], pol, reim],
+                        title=f"{mom}/{pol}/ratio_fit_{reim}_{operator}_{mom}_n2sig_paper",
+                    )
+
     return
 
 
@@ -2349,6 +2250,303 @@ def fit_3point_loop_sig2n(
                         [mom, operators_tex[iop], pol, reim],
                         title=f"{mom}/{pol}/ratio_fit_{reim}_{operator}_sig2n",
                     )
+                    plot_ratio_fit_paper(
+                        full_ratio_list_reim[ir],
+                        ratio_fit_boot,
+                        delta_t_list[imom],
+                        src_snk_times,
+                        redchisq_ratio,
+                        fit_param_ratio_boot,
+                        plotdir,
+                        [mom, operators_tex[iop], pol, reim],
+                        title=f"{mom}/{pol}/ratio_fit_{reim}_{operator}_{mom}_sig2n_paper",
+                    )
+
+    return
+
+
+def plot_3point_loop_n2sig(
+    latticedir,
+    resultsdir,
+    plotdir,
+    datadir,
+    operators,
+    operators_tex,
+    polarizations,
+    momenta,
+    delta_t_list,
+    tmin_choice,
+    tmin_choice_zero,
+):
+    """Loop over the operators and momenta"""
+
+    src_snk_times = np.array([10, 13, 16])
+    rel = "nr"
+    for imom, mom in enumerate(momenta):
+        print(f"\n{mom}")
+        # ======================================================================
+        # Read the two-point function data
+        twoptfn_filename_sigma = latticedir / Path(
+            f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp120620/sh_gij_p21_90-sh_gij_p21_90/p+0+0+0/barspec_nucleon_{rel}_500cfgs.pickle"
+        )
+        twoptfn_filename_neutron = latticedir / Path(
+            f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp121040/sh_gij_p21_90-sh_gij_p21_90/{mom}/barspec_nucleon_{rel}_500cfgs.pickle"
+        )
+        twoptfn_sigma = read_pickle(twoptfn_filename_sigma, nboot=500, nbin=1)
+        twoptfn_neutron = read_pickle(twoptfn_filename_neutron, nboot=500, nbin=1)
+
+        twoptfn_sigma_real = twoptfn_sigma[:, :, 0]
+        twoptfn_neutron_real = twoptfn_neutron[:, :, 0]
+
+        for iop, operator in enumerate(operators):
+            print(f"\n{operator}")
+            for ipol, pol in enumerate(polarizations):
+                print(f"\n{pol}")
+                # Read in the 3pt function data
+                threeptfn_pickle_t10 = latticedir / Path(
+                    f"bar3ptfn_t10/bar3ptfn/32x64/unpreconditioned_slrc/kp121040tkp120620_kp121040/NUCL_D_{pol}_NONREL_gI_t10/sh_gij_p21_90-sh_gij_p21_90/{mom}/bar3ptfn_{operator}_500cfgs.pickle"
+                )
+                threeptfn_pickle_t13 = latticedir / Path(
+                    f"bar3ptfn_t13/bar3ptfn/32x64/unpreconditioned_slrc/kp121040tkp120620_kp121040/NUCL_D_{pol}_NONREL_gI_t13/sh_gij_p21_90-sh_gij_p21_90/{mom}/bar3ptfn_{operator}_500cfgs.pickle"
+                )
+                threeptfn_pickle_t16 = latticedir / Path(
+                    f"bar3ptfn_t16/bar3ptfn/32x64/unpreconditioned_slrc/kp121040tkp120620_kp121040/NUCL_D_{pol}_NONREL_gI_t16/sh_gij_p21_90-sh_gij_p21_90/{mom}/bar3ptfn_{operator}_500cfgs.pickle"
+                )
+                threeptfn_t10 = read_pickle(threeptfn_pickle_t10, nboot=500, nbin=1)
+                threeptfn_t13 = read_pickle(threeptfn_pickle_t13, nboot=500, nbin=1)
+                threeptfn_t16 = read_pickle(threeptfn_pickle_t16, nboot=500, nbin=1)
+
+                # ======================================================================
+                # Construct the simple ratio of 3pt and 2pt functions
+                ratio_t10 = np.einsum(
+                    "ijk,i->ijk", threeptfn_t10, twoptfn_sigma_real[:, 10] ** (-1)
+                )
+                ratio_t13 = np.einsum(
+                    "ijk,i->ijk", threeptfn_t13, twoptfn_sigma_real[:, 13] ** (-1)
+                )
+                ratio_t16 = np.einsum(
+                    "ijk,i->ijk", threeptfn_t16, twoptfn_sigma_real[:, 16] ** (-1)
+                )
+                simple_ratio_list = np.array([ratio_t10, ratio_t13, ratio_t16])
+
+                # ======================================================================
+                # Construct the full ratio of 3pt and 2pt functions
+                ratio_full_t10 = make_full_ratio(
+                    threeptfn_t10, twoptfn_sigma_real, twoptfn_neutron_real, 10
+                )
+                ratio_full_t13 = make_full_ratio(
+                    threeptfn_t13, twoptfn_sigma_real, twoptfn_neutron_real, 13
+                )
+                ratio_full_t16 = make_full_ratio(
+                    threeptfn_t16, twoptfn_sigma_real, twoptfn_neutron_real, 16
+                )
+                full_ratio_list_reim = [
+                    [
+                        ratio_full_t10[:, :, 0],
+                        ratio_full_t13[:, :, 0],
+                        ratio_full_t16[:, :, 0],
+                    ],
+                    [
+                        ratio_full_t10[:, :, 1],
+                        ratio_full_t13[:, :, 1],
+                        ratio_full_t16[:, :, 1],
+                    ],
+                ]
+
+                # ======================================================================
+                # Read the results of the fit to the two-point functions
+                kappa_combs = ["kp121040kp121040", "kp121040kp120620"]
+                datafile_n = datadir / Path(
+                    f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
+                )
+                with open(datafile_n, "rb") as file_in:
+                    fit_data_n = pickle.load(file_in)
+                datafile_s = datadir / Path(
+                    f"{kappa_combs[1]}_p+0+0+0_{rel}_fitlist_2pt_2exp.pkl"
+                )
+                with open(datafile_s, "rb") as file_in:
+                    fit_data_s = pickle.load(file_in)
+
+                for ir, reim in enumerate(["real", "imag"]):
+                    print(reim)
+                    # ======================================================================
+                    # read the fit results to pickle files
+                    datafile_ratio = datadir / Path(
+                        f"{mom}_{operator}_{pol}_{rel}_{reim}_3pt_ratio_fit_n2sig.pkl"
+                    )
+                    with open(datafile_ratio, "rb") as file_in:
+                        fit_params_ratio = pickle.load(file_in)
+
+                    (
+                        fit_param_ratio_boot,
+                        ratio_fit_boot,
+                        fit_param_ratio_avg,
+                        redchisq_ratio,
+                        best_fit_n,
+                        best_fit_s,
+                    ) = fit_params_ratio
+
+                    # ======================================================================
+                    # Plot the results of the fit to the ratio
+                    plot_ratio_fit(
+                        full_ratio_list_reim[ir],
+                        ratio_fit_boot,
+                        delta_t_list[imom],
+                        src_snk_times,
+                        redchisq_ratio,
+                        fit_param_ratio_boot,
+                        plotdir,
+                        [mom, operators_tex[iop], pol, reim],
+                        title=f"{mom}/{pol}/ratio_fit_{reim}_{operator}_n2sig",
+                    )
+                    plot_ratio_fit_paper(
+                        full_ratio_list_reim[ir],
+                        ratio_fit_boot,
+                        delta_t_list[imom],
+                        src_snk_times,
+                        redchisq_ratio,
+                        fit_param_ratio_boot,
+                        plotdir,
+                        [mom, operators_tex[iop], pol, reim],
+                        title=f"{mom}/{pol}/ratio_fit_{reim}_{operator}_{mom}_n2sig_paper",
+                    )
+
+    return
+
+
+def plot_3point_loop_sig2n(
+    latticedir,
+    resultsdir,
+    plotdir,
+    datadir,
+    operators,
+    operators_tex,
+    polarizations,
+    momenta,
+    delta_t_list,
+    tmin_choice,
+    tmin_choice_zero,
+):
+    """Loop over the operators and momenta"""
+
+    src_snk_times = np.array([10, 13, 16])
+    rel = "nr"
+    for imom, mom in enumerate(momenta):
+        print(f"\n{mom}")
+        # ======================================================================
+        # Read the two-point function data
+        twoptfn_filename_sigma = latticedir / Path(
+            f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp120620/sh_gij_p21_90-sh_gij_p21_90/{mom}/barspec_nucleon_{rel}_500cfgs.pickle"
+        )
+        twoptfn_filename_neutron = latticedir / Path(
+            f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp121040/sh_gij_p21_90-sh_gij_p21_90/p+0+0+0/barspec_nucleon_{rel}_500cfgs.pickle"
+        )
+        twoptfn_sigma = read_pickle(twoptfn_filename_sigma, nboot=500, nbin=1)
+        twoptfn_neutron = read_pickle(twoptfn_filename_neutron, nboot=500, nbin=1)
+
+        twoptfn_sigma_real = twoptfn_sigma[:, :, 0]
+        twoptfn_neutron_real = twoptfn_neutron[:, :, 0]
+
+        for iop, operator in enumerate(operators):
+            print(f"\n{operator}")
+            for ipol, pol in enumerate(polarizations):
+                print(f"\n{pol}")
+                # Read in the 3pt function data
+                threeptfn_pickle_t10 = latticedir / Path(
+                    f"sig2n/bar3ptfn_t10/bar3ptfn/32x64/unpreconditioned_slrc/kp120620tkp121040_kp121040/NUCL_D_{pol}_NONREL_gI_t10/sh_gij_p21_90-sh_gij_p21_90/{mom}/bar3ptfn_{operator}_500cfgs.pickle"
+                )
+                threeptfn_pickle_t13 = latticedir / Path(
+                    f"sig2n/bar3ptfn_t13/bar3ptfn/32x64/unpreconditioned_slrc/kp120620tkp121040_kp121040/NUCL_D_{pol}_NONREL_gI_t13/sh_gij_p21_90-sh_gij_p21_90/{mom}/bar3ptfn_{operator}_500cfgs.pickle"
+                )
+                threeptfn_pickle_t16 = latticedir / Path(
+                    f"sig2n/bar3ptfn_t16/bar3ptfn/32x64/unpreconditioned_slrc/kp120620tkp121040_kp121040/NUCL_D_{pol}_NONREL_gI_t16/sh_gij_p21_90-sh_gij_p21_90/{mom}/bar3ptfn_{operator}_500cfgs.pickle"
+                )
+                threeptfn_t10 = read_pickle(threeptfn_pickle_t10, nboot=500, nbin=1)
+                threeptfn_t13 = read_pickle(threeptfn_pickle_t13, nboot=500, nbin=1)
+                threeptfn_t16 = read_pickle(threeptfn_pickle_t16, nboot=500, nbin=1)
+
+                # ======================================================================
+                # Construct the full ratio of 3pt and 2pt functions
+                ratio_full_t10 = make_full_ratio(
+                    threeptfn_t10, twoptfn_neutron_real, twoptfn_sigma_real, 10
+                )
+                ratio_full_t13 = make_full_ratio(
+                    threeptfn_t13, twoptfn_neutron_real, twoptfn_sigma_real, 13
+                )
+                ratio_full_t16 = make_full_ratio(
+                    threeptfn_t16, twoptfn_neutron_real, twoptfn_sigma_real, 16
+                )
+                full_ratio_list_reim = [
+                    [
+                        ratio_full_t10[:, :, 0],
+                        ratio_full_t13[:, :, 0],
+                        ratio_full_t16[:, :, 0],
+                    ],
+                    [
+                        ratio_full_t10[:, :, 1],
+                        ratio_full_t13[:, :, 1],
+                        ratio_full_t16[:, :, 1],
+                    ],
+                ]
+                # ======================================================================
+                # Read the results of the fit to the two-point functions
+
+                kappa_combs = ["kp121040kp121040", "kp121040kp120620"]
+                datafile_n = datadir / Path(
+                    f"{kappa_combs[0]}_p+0+0+0_{rel}_fitlist_2pt_2exp.pkl"
+                )
+                with open(datafile_n, "rb") as file_in:
+                    fit_data_n = pickle.load(file_in)
+                datafile_s = datadir / Path(
+                    f"{kappa_combs[1]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
+                )
+                with open(datafile_s, "rb") as file_in:
+                    fit_data_s = pickle.load(file_in)
+
+                for ir, reim in enumerate(["real", "imag"]):
+                    print(reim)
+                    # ======================================================================
+                    # read the fit results to pickle files
+                    datafile_ratio = datadir / Path(
+                        f"{mom}_{operator}_{pol}_{rel}_{reim}_3pt_ratio_fit_sig2n.pkl"
+                    )
+                    with open(datafile_ratio, "rb") as file_in:
+                        fit_params_ratio = pickle.load(file_in)
+
+                    (
+                        fit_param_ratio_boot,
+                        ratio_fit_boot,
+                        fit_param_ratio_avg,
+                        redchisq_ratio,
+                        best_fit_n,
+                        best_fit_s,
+                    ) = fit_params_ratio
+
+                    # ======================================================================
+                    # Plot the results of the fit to the ratio
+                    plot_ratio_fit(
+                        full_ratio_list_reim[ir],
+                        ratio_fit_boot,
+                        delta_t_list[imom],
+                        src_snk_times,
+                        redchisq_ratio,
+                        fit_param_ratio_boot,
+                        plotdir,
+                        [mom, operators_tex[iop], pol, reim],
+                        title=f"{mom}/{pol}/ratio_fit_{reim}_{operator}_sig2n",
+                    )
+                    plot_ratio_fit_paper(
+                        full_ratio_list_reim[ir],
+                        ratio_fit_boot,
+                        delta_t_list[imom],
+                        src_snk_times,
+                        redchisq_ratio,
+                        fit_param_ratio_boot,
+                        plotdir,
+                        [mom, operators_tex[iop], pol, reim],
+                        title=f"{mom}/{pol}/ratio_fit_{reim}_{operator}_{mom}_sig2n_paper",
+                    )
+
     return
 
 

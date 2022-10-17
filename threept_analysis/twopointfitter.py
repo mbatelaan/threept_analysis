@@ -315,7 +315,7 @@ def plot_2pt_2exp_fit(
         color=_colors[0],
         fmt="s",
     )
-    plt.xlim(0, 30)
+    plt.xlim(0, 22)
     plt.ylim(0, 1)
     plt.plot(
         best_fit_n["x"][:-1],
@@ -357,7 +357,7 @@ def plot_2pt_2exp_fit(
         color=_colors[0],
         fmt="s",
     )
-    plt.xlim(0, 30)
+    plt.xlim(0, 22)
     plt.ylim(0, 1)
     plt.plot(
         best_fit_s["x"][:-1],
@@ -875,7 +875,8 @@ def main():
     datadir.mkdir(parents=True, exist_ok=True)
 
     momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
-    tmin_choice = [5, 4, 4]
+    # tmin_choice = [5, 4, 4]
+    tmin_choice = [7, 7, 7]
 
     # ======================================================================
     # Read the two-point functions and fit a two-exponential function to it
