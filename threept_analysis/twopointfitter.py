@@ -41,8 +41,8 @@ def fit_2ptfn_2exp(evxptdir, plotdir, datadir, rel="rel"):
     """Read the two-point function and fit a two-exponential function to it over a range of fit windows, then save the fit data to pickle files."""
 
     kappa_combs = [
-        "kp121040kp121040",
         "kp121040kp120620",
+        "kp121040kp121040",
     ]
     momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
     fitfunction = fitfunc.initffncs("Twoexp_log")
@@ -291,7 +291,7 @@ def plot_2pt_2exp_fit(
     plt.ylim(0.3, 1.5)
     plt.xlabel(r"$t_{\textrm{min}}$")
     plt.ylabel(r"$E_i$")
-    savefile = plotdir / Path(f"twopoint/energies_p+0+0+0_s_2exp.pdf")
+    savefile = plotdir / Path(f"twopoint/energies_{title}_s_2exp.pdf")
     savefile.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(savefile)
     # plt.show()
@@ -376,7 +376,7 @@ def plot_2pt_2exp_fit(
         linewidth=0,
     )
     plt.legend()
-    savefile = plotdir / Path(f"twopoint/bestfit_p+0+0+0_s_2exp.pdf")
+    savefile = plotdir / Path(f"twopoint/bestfit_{title}_s_2exp.pdf")
     savefile.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(savefile)
     plt.close()
@@ -811,7 +811,7 @@ def read_2pt_fits_2exp(evxptdir, plotdir, datadir, momenta, rel, tmin_choice):
             fit_data_n = pickle.load(file_in)
 
         datafile_s = datadir / Path(
-            f"{kappa_combs[1]}_p+0+0+0_{rel}_fitlist_2pt_2exp.pkl"
+            f"{kappa_combs[1]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
         )
         with open(datafile_s, "rb") as file_in:
             fit_data_s = pickle.load(file_in)
