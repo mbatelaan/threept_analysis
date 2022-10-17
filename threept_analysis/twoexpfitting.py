@@ -1797,59 +1797,40 @@ def main():
         "$\gamma_2$",
         "$\gamma_3$",
         "$\gamma_4$",
-        # "g5",
-        # "g51",
-        # "g53",
-        # "g01",
-        # "g02",
-        # "g03",
-        # "g05",
-        # "g12",
-        # "g13",
-        # "g23",
-        # "g25",
-        # "gI",
     ]
     operators = [
         "g0",
         "g1",
         "g2",
         "g3",
-        # "g5",
-        # "g51",
-        # "g53",
-        # "g01",
-        # "g02",
-        # "g03",
-        # "g05",
-        # "g12",
-        # "g13",
-        # "g23",
-        # "g25",
-        # "gI",
     ]
     polarizations = ["UNPOL", "POL"]
     momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
     delta_t_list = [5, 4, 4]
     tmin_choice = [5, 4, 4]
 
-    # operators_tex = ["$\gamma_4$"]
-    # operators = ["g3"]
-    # polarizations = ["UNPOL"]
-    # momenta = ["p+0+0+0"]
-    # fit_3point_zeromom(
-    #     latticedir,
-    #     resultsdir,
-    #     plotdir,
-    #     datadir,
-    #     operators,
-    #     operators_tex,
-    #     polarizations,
-    #     momenta,
-    #     delta_t_list,
-    #     tmin_choice,
-    # )
+    # ======================================================================
+    # Construct a ratio with two 3pt functions and fit it for the zero momentum transfer case
+    operators = ["g3"]
+    operators_tex = ["$\gamma_4$"]
+    polarizations = ["UNPOL"]
+    momenta = ["p+0+0+0"]
+    fit_3point_zeromom(
+        latticedir,
+        resultsdir,
+        plotdir,
+        datadir,
+        operators,
+        operators_tex,
+        polarizations,
+        momenta,
+        delta_t_list,
+        tmin_choice,
+    )
 
+    exit()
+    # ======================================================================
+    # Construct a ratio with 3pt and 2pt functions and fit it for the sigma to neutron transition
     operators_tex = [
         "$\gamma_1$",
         "$\gamma_2$",
@@ -1864,10 +1845,7 @@ def main():
     ]
     polarizations = ["UNPOL", "POL"]
     momenta = ["p+1+0+0", "p+1+1+0"]
-    # delta_t_list = [4, 4]
-    # tmin_choice = [4, 4]
     delta_t_list = [5, 5]
-    # tmin_choice = [5, 5]
     tmin_choice = [7, 7]
     tmin_choice_zero = 5
     fit_3point_loop_sig2n(
@@ -1884,6 +1862,8 @@ def main():
         tmin_choice_zero,
     )
 
+    # ======================================================================
+    # Construct a ratio with 3pt and 2pt functions and fit it for the neutron to sigma transition
     fit_3point_loop_n2sig(
         latticedir,
         resultsdir,
@@ -2421,7 +2401,7 @@ def fit_3point_zeromom(
         # ======================================================================
         # Read the two-point function data
         twoptfn_filename_sigma = latticedir / Path(
-            f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp120620/sh_gij_p21_90-sh_gij_p21_90/p+0+0+0/barspec_nucleon_{rel}_500cfgs.pickle"
+            f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp120620/sh_gij_p21_90-sh_gij_p21_90/{mom}/barspec_nucleon_{rel}_500cfgs.pickle"
         )
         twoptfn_filename_neutron = latticedir / Path(
             f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp121040/sh_gij_p21_90-sh_gij_p21_90/{mom}/barspec_nucleon_{rel}_500cfgs.pickle"
@@ -2527,8 +2507,6 @@ def fit_3point_zeromom(
                 kappa_combs = [
                     "kp121040kp121040",
                     "kp121040kp120620",
-                    "kp120620kp121040",
-                    "kp120620kp120620",
                 ]
                 datafile_n = datadir / Path(
                     f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
@@ -2536,12 +2514,12 @@ def fit_3point_zeromom(
                 with open(datafile_n, "rb") as file_in:
                     fit_data_n = pickle.load(file_in)
                 datafile_s = datadir / Path(
-                    f"{kappa_combs[1]}_p+0+0+0_{rel}_fitlist_2pt_2exp.pkl"
+                    f"{kappa_combs[1]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
                 )
                 with open(datafile_s, "rb") as file_in:
                     fit_data_s = pickle.load(file_in)
 
-                for ir, reim in enumerate(["real", "imag"]):
+                for ir, reim in enumerate(["real"]):
                     print(reim)
                     # ======================================================================
                     # fit to the ratio of 3pt and 2pt functions with a two-exponential function
@@ -2560,6 +2538,7 @@ def fit_3point_zeromom(
                         src_snk_times,
                         delta_t_list[imom],
                         tmin_choice[imom],
+                        tmin_choice[imom],
                         datadir,
                         fitfnc_2exp,
                     )
@@ -2573,6 +2552,7 @@ def fit_3point_zeromom(
                     ]
 
                     # Save the fit results to pickle files
+                    # print(f"{fit_params_ratio[0][:,0]=}")
                     datafile_ratio = datadir / Path(
                         f"{mom}_{operator}_{pol}_{rel}_{reim}_double_3pt_ratio_fit.pkl"
                     )

@@ -83,6 +83,8 @@ def main():
         gammaI,
     ]
 
+    form_factors_zeromom(datadir)
+
     FF_factors_all, matrix_elements_all, form_factor_values = form_factors_n2sig(
         mN,
         mS,
@@ -112,6 +114,29 @@ def main():
         operators_F2,
         operators_F3,
     )
+    return
+
+
+def form_factors_zeromom(datadir):
+    """Construct the prefactors for the neutron to sigma transition
+    Saves the data in a pickle file and returns
+    an array of all the prefactors,
+    an array of the matrix element values,
+    an array of the values of the three form factors for each momentum, and all bootstraps
+    """
+
+    datafile_ratio = datadir / Path(
+        f"p+0+0+0_g3_UNPOL_nr_real_double_3pt_ratio_fit.pkl"
+    )
+    with open(datafile_ratio, "rb") as file_in:
+        fit_data = pickle.load(file_in)
+    matrix_element_zeromom = fit_data[0][:, 0]
+
+    datafile = datadir / Path(f"matrix_element_3pt_fit_zeromom.pkl")
+    with open(datafile, "wb") as file_out:
+        pickle.dump(matrix_element_zeromom, file_out)
+
+    return matrix_element_zeromom
 
 
 def form_factors_n2sig(
