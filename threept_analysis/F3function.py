@@ -6,7 +6,7 @@ from formatting import err_brackets
 
 
 def F3_fnc(Gamm, oper, p, pp):
-    """Calculates the value of the F_3 function.
+    """Calculates the value of the F_3 function (as defined in Chambers' thesis).
     Gamm is the projection matrix
     oper is the operator
     p and pp are the initial and final momentum respectively
@@ -172,7 +172,9 @@ def form_factors_n2sig(
         print(f"\n\n\n{mom=}")
         p = pmom(*mom, mN)
         print(f"Neutron energy = {p.Energy()}")
+        # This is the factor of energies and masses which multiplies F_3 in the large-time limit of the ratio we constructed.
         prefactor = 1 / (mS * np.sqrt(2 * p.Energy() * (p.Energy() + mN)))
+        # We multiply this prefactor with the other kinematic variables which are in front of F1, F2 and F3.
         factors_F1 = [
             prefactor,
             prefactor,
@@ -201,7 +203,6 @@ def form_factors_n2sig(
                 prefactor * p.vector()[2] / (mN + mS),
             ],
         ]
-
         factors_F3 = [
             prefactor * 1.0j * p.vector()[0] / (mN + mS),
             prefactor * 1.0j * p.vector()[1] / (mN + mS),
@@ -213,8 +214,8 @@ def form_factors_n2sig(
             # print(f"\n{iop=}")
             for ipol, pol in enumerate(polarizations):
                 # print(f"\n{ipol=}")
-                # Calculate the value of the F_3 function for each operator in front of form factor F_i
-                # Then multiply this by the appropriate kinematic factors
+                # Calculate the value of the F_3 function for each operator in front of form factor F_i and for both polarizations.
+                # Then multiply this by the appropriate kinematic factors defined above
                 F3_F1 = F3_fnc(pol, operators_F1[iop], p, pp)
                 F3_F2 = np.array([F3_fnc(pol, jop, p, pp) for jop in operators_F2[iop]])
                 F3_F3 = F3_fnc(pol, operators_F3[iop], p, pp)
@@ -223,10 +224,11 @@ def form_factors_n2sig(
                 F2_factor = np.dot(F3_F2, factors_F2[iop])
                 F3_factor = F3_F3 * factors_F3[iop]
 
+                # Now we know the exact linear combination of the form factors which the fit to the ratio gives us.
                 FF_factors = np.array([F1_factor, F2_factor, F3_factor])
                 FF_factors_all[imom, iop, ipol] = FF_factors
 
-    # Read the values of the matrix element from fits to the three-point functions
+    # Read the values of the matrix element from fits to the ratio of 3pt and 2pt functions
     transition = "n2sig"
     matrix_elements_all = read_fit_data(
         nboot,
@@ -236,17 +238,6 @@ def form_factors_n2sig(
         momenta_pickle,
         transition,
     )
-    # print(f"{np.shape(matrix_elements_all)=}")
-    # # print(f"{matrix_elements_all=}")
-
-    # print(
-    #     np.real(FF_factors_all[0, 3, 0, :]),
-    #     np.average(matrix_elements_all[0, 3, 0, 0, :]),
-    # )
-    # print(
-    #     np.imag(FF_factors_all[0, 3, 0, :]),
-    #     np.average(matrix_elements_all[0, 3, 0, 1, :]),
-    # )
 
     # The shapes of the matrices are:
     # np.shape(FF_factors_all)=(3, 4, 2, 3)
@@ -254,6 +245,8 @@ def form_factors_n2sig(
     # np.shape(matrix_elements_all)=(3, 4, 2, 2, 500)
     #    = (momenta, operators, polarizations, real/imag, nboot)
 
+    # Solve the set of linear equations for the three form factors
+    # Do this for each set of non-zero momenta
     print("solving for the form factors")
     form_factor_values = np.zeros((len(momenta), num_of_ff, nboot))
     for solve_mom, mom_val in enumerate(momenta):
@@ -276,25 +269,15 @@ def form_factors_n2sig(
     with open(datafile, "wb") as file_out:
         pickle.dump(form_factor_values, file_out)
 
-    # print(f"{np.shape(ff_avg)=}")
-    # print(f"{np.shape(mom0_factors)=}")
-    # print(f"{ff_avg=}")
-    # print(f"{ff_std=}")
-
+    # Get the linear combination of form factors which corresponds to the gamma_4 current and an unpolarized projection.
+    # This is the operator we used for the FH method.
     gamma4_factors = np.real(FF_factors_all[:, 3, 0, :])
-
-    matrix_element_gamma4 = np.einsum("ij,ijk->ijk", gamma4_factors, form_factor_values)
-    test2_ = np.einsum("ijk->ik", matrix_element_gamma4)
-    print(f"{np.average(test2_, axis=1)=}")
-
-    # test = gamma4_factors * ff_avg
-    # test2 = np.sum(test * ff_avg, axis=1)
-    # print(f"{test=}")
-    # print(f"{test2=}")
+    # Multiply the determined values for the form factors in the gamma_4 linear combination
+    matrix_element_gamma4 = np.einsum("ij,ijk->ik", gamma4_factors, form_factor_values)
 
     datafile = datadir / Path(f"matrix_element_3pt_fit_n2sig.pkl")
     with open(datafile, "wb") as file_out:
-        pickle.dump(test2_, file_out)
+        pickle.dump(matrix_element_gamma4, file_out)
 
     ff_avg = np.average(form_factor_values, axis=2)
     ff_std = np.std(form_factor_values, axis=2)
@@ -429,15 +412,14 @@ def form_factors_sig2n(
     with open(datafile, "wb") as file_out:
         pickle.dump(form_factor_values, file_out)
 
-    # Combine the form factors in the same combination as the Feynman-Hellmann results
+    # Get the linear combination of form factors which corresponds to the gamma_4 current and an unpolarized projection.
+    # This is the operator we used for the FH method.
     gamma4_factors = np.real(FF_factors_all[:, 3, 0, :])
-    matrix_element_gamma4 = np.einsum("ij,ijk->ijk", gamma4_factors, form_factor_values)
-    test2_ = np.einsum("ijk->ik", matrix_element_gamma4)
-    print(f"{np.average(test2_, axis=1)=}")
+    matrix_element_gamma4 = np.einsum("ij,ijk->ik", gamma4_factors, form_factor_values)
 
     datafile = datadir / Path(f"matrix_element_3pt_fit_sig2n.pkl")
     with open(datafile, "wb") as file_out:
-        pickle.dump(test2_, file_out)
+        pickle.dump(matrix_element_gamma4, file_out)
 
     ff_avg = np.average(form_factor_values, axis=2)
     ff_std = np.std(form_factor_values, axis=2)

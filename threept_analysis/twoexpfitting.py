@@ -367,6 +367,34 @@ def fit_3ptfn_2exp(
     )
 
 
+def select_2pt_fit(
+    fit_data_list, tmin_choice_nucl, tmin_choice_sigma, datadir, mom, transition
+):
+    """Sort through the fits to the two-point function and pick out one fit result that has the chosen tmin and tmax"""
+    # Nucleon
+    fit_times_n = [fit["x"] for fit in fit_data_list[0]]
+    chosen_time = np.where([times[0] == tmin_choice_nucl for times in fit_times_n])[0][
+        0
+    ]
+    best_fit_n = fit_data_list[0][chosen_time]
+    fit_params_n = best_fit_n["param"]
+
+    # Sigma
+    fit_times_s = [fit["x"] for fit in fit_data_list[1]]
+    chosen_time = np.where([times[0] == tmin_choice_sigma for times in fit_times_s])[0][
+        0
+    ]
+    best_fit_s = fit_data_list[1][chosen_time]
+    fit_params_s = best_fit_s["param"]
+
+    # Save the chosen fit results to pickle files
+    datafile_ = datadir / Path(f"{mom}_{transition}_2pt_fit_choice.pkl")
+    with open(datafile_, "wb") as file_out:
+        pickle.dump([fit_params_n, fit_params_s], file_out)
+
+    return best_fit_n, best_fit_s, fit_params_n, fit_params_s
+
+
 def fit_ratio_2exp(
     ratio_list,
     twoptfn_list,
@@ -380,44 +408,17 @@ def fit_ratio_2exp(
 ):
     """Fit to the three-point function with a two-exponential function, which includes parameters from the two-point functions"""
     # tmin_choice_sigma = 5
-    weight_tol = 0.01
-    fitweights_n = np.array([fit["weight"] for fit in fit_data_list[0]])
-    fitweights_n = np.where(fitweights_n > weight_tol, fitweights_n, 0)
-    fitweights_n = fitweights_n / sum(fitweights_n)
-    fitparams_n = np.array([fit["param"] for fit in fit_data_list[0]])
-    fit_times_n = [fit["x"] for fit in fit_data_list[0]]
-    chosen_time = np.where([times[0] == tmin_choice_nucl for times in fit_times_n])[0][
-        0
-    ]
-    # print(f"{chosen_time=}")
-    best_fit_n = fit_data_list[0][chosen_time]
-    weighted_fit_n = best_fit_n["param"]
-
-    fitweights_s = np.array([fit["weight"] for fit in fit_data_list[1]])
-    fitweights_s = np.where(fitweights_s > weight_tol, fitweights_s, 0)
-    fitweights_s = fitweights_s / sum(fitweights_s)
-    fitparams_s = np.array([fit["param"] for fit in fit_data_list[1]])
-    fit_times_s = [fit["x"] for fit in fit_data_list[1]]
-    chosen_time = np.where([times[0] == tmin_choice_sigma for times in fit_times_s])[0][
-        0
-    ]
-    # print(f"{chosen_time=}")
-    best_fit_s = fit_data_list[1][chosen_time]
-    weighted_fit_s = best_fit_s["param"]
+    twopt_fit_params_n, twopt_fit_params_s = fit_data_list
 
     # Set the parameters from the twoptfn
-    A_E0i = weighted_fit_n[:, 0]
-    A_E0f = weighted_fit_s[:, 0]
-    # A_E1i = weighted_fit_n[:, 2]
-    # A_E1f = weighted_fit_s[:, 2]
-    A_E1i = weighted_fit_n[:, 0] * weighted_fit_n[:, 2]
-    A_E1f = weighted_fit_s[:, 0] * weighted_fit_s[:, 2]
-    E0i = weighted_fit_n[:, 1]
-    E0f = weighted_fit_s[:, 1]
-    # Delta_E01i = weighted_fit_n[:, 3] - weighted_fit_n[:, 1]
-    # Delta_E01f = weighted_fit_s[:, 3] - weighted_fit_s[:, 1]
-    Delta_E01i = np.exp(weighted_fit_n[:, 3])
-    Delta_E01f = np.exp(weighted_fit_s[:, 3])
+    A_E0i = twopt_fit_params_n[:, 0]
+    A_E0f = twopt_fit_params_s[:, 0]
+    A_E1i = twopt_fit_params_n[:, 0] * twopt_fit_params_n[:, 2]
+    A_E1f = twopt_fit_params_s[:, 0] * twopt_fit_params_s[:, 2]
+    E0i = twopt_fit_params_n[:, 1]
+    E0f = twopt_fit_params_s[:, 1]
+    Delta_E01i = np.exp(twopt_fit_params_n[:, 3])
+    Delta_E01f = np.exp(twopt_fit_params_s[:, 3])
 
     # Create the fit data
     fitdata = np.concatenate(
@@ -518,8 +519,6 @@ def fit_ratio_2exp(
         ratio_fit_boot,
         fit_param_avg,
         redchisq,
-        best_fit_n,
-        best_fit_s,
     )
 
 
@@ -952,12 +951,7 @@ def plot_2pt_fit(
 
 
 def make_mat_elements(fit_params, datadir):
-    kappa_combs = [
-        "kp121040kp121040",
-        "kp121040kp120620",
-        "kp120620kp121040",
-        "kp120620kp120620",
-    ]
+    kappa_combs = ["kp121040kp121040", "kp121040kp120620"]
     momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
     datafile_n = datadir / Path(f"{kappa_combs[0]}_p+0+0+0_fitlist_2pt.pkl")
     # datafile_n = datadir / Path(f"{kappa_combs[0]}_{mom}_fitlist_2pt.pkl")
@@ -1806,7 +1800,8 @@ def main():
     momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
     delta_t_list = [5, 5, 5]
     # tmin_choice = [5, 5, 5]
-    tmin_choice = [7, 7, 7]
+    tmin_choice = [4, 4, 4]
+    # tmin_choice = [7, 7, 7]
 
     # ======================================================================
     # Calculate the Q^2 values for each of the n2sig and sig2n transitions and momenta
@@ -1916,9 +1911,9 @@ def fit_3point_loop_n2sig(
     tmin_choice_zero,
 ):
     """Loop over the operators and momenta"""
-
+    transition = "n2sig"
     src_snk_times = np.array([10, 13, 16])
-    rel = "nr"  #'rel'
+    rel = "nr"
     for imom, mom in enumerate(momenta):
         print(f"\n{mom}")
         # ======================================================================
@@ -1934,6 +1929,30 @@ def fit_3point_loop_n2sig(
 
         twoptfn_sigma_real = twoptfn_sigma[:, :, 0]
         twoptfn_neutron_real = twoptfn_neutron[:, :, 0]
+
+        # ======================================================================
+        # Read the results of the fit to the two-point functions
+        kappa_combs = ["kp121040kp121040", "kp121040kp120620"]
+        datafile_n = datadir / Path(
+            f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
+        )
+        with open(datafile_n, "rb") as file_in:
+            fit_data_n = pickle.load(file_in)
+        datafile_s = datadir / Path(
+            f"{kappa_combs[1]}_p+0+0+0_{rel}_fitlist_2pt_2exp.pkl"
+        )
+        with open(datafile_s, "rb") as file_in:
+            fit_data_s = pickle.load(file_in)
+
+        # Pick out the chosen 2pt fn fits
+        best_fit_n, best_fit_s, fit_params_n, fit_params_s = select_2pt_fit(
+            [fit_data_n, fit_data_s],
+            tmin_choice[imom],
+            tmin_choice_zero,
+            datadir,
+            mom,
+            transition,
+        )
 
         for iop, operator in enumerate(operators):
             print(f"\n{operator}")
@@ -1952,19 +1971,6 @@ def fit_3point_loop_n2sig(
                 threeptfn_t10 = read_pickle(threeptfn_pickle_t10, nboot=500, nbin=1)
                 threeptfn_t13 = read_pickle(threeptfn_pickle_t13, nboot=500, nbin=1)
                 threeptfn_t16 = read_pickle(threeptfn_pickle_t16, nboot=500, nbin=1)
-
-                # ======================================================================
-                # Construct the simple ratio of 3pt and 2pt functions
-                ratio_t10 = np.einsum(
-                    "ijk,i->ijk", threeptfn_t10, twoptfn_sigma_real[:, 10] ** (-1)
-                )
-                ratio_t13 = np.einsum(
-                    "ijk,i->ijk", threeptfn_t13, twoptfn_sigma_real[:, 13] ** (-1)
-                )
-                ratio_t16 = np.einsum(
-                    "ijk,i->ijk", threeptfn_t16, twoptfn_sigma_real[:, 16] ** (-1)
-                )
-                simple_ratio_list = np.array([ratio_t10, ratio_t13, ratio_t16])
 
                 # ======================================================================
                 # Construct the full ratio of 3pt and 2pt functions
@@ -1990,43 +1996,8 @@ def fit_3point_loop_n2sig(
                     ],
                 ]
 
-                # ======================================================================
-                # plot the real part of the 3pt fn ratio
-                # plot_all_ratios(
-                #     full_ratio_list_reim[0],
-                #     src_snk_times,
-                #     plotdir,
-                #     [mom, operators_tex[iop], pol],
-                #     title=f"{mom}/{pol}/full_ratios_real_{operator}",
-                # )
-
-                # ======================================================================
-                # Read the results of the fit to the two-point functions
-
-                kappa_combs = [
-                    "kp121040kp121040",
-                    "kp121040kp120620",
-                    "kp120620kp121040",
-                    "kp120620kp120620",
-                ]
-                datafile_n = datadir / Path(
-                    f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
-                )
-                # datafile_n = datadir / Path(
-                #     f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt_3exp.pkl"
-                # )
-                with open(datafile_n, "rb") as file_in:
-                    fit_data_n = pickle.load(file_in)
-                datafile_s = datadir / Path(
-                    f"{kappa_combs[1]}_p+0+0+0_{rel}_fitlist_2pt_2exp.pkl"
-                )
-                # datafile_s = datadir / Path(
-                #     f"{kappa_combs[1]}_p+0+0+0_{rel}_fitlist_2pt_3exp.pkl"
-                # )
-                with open(datafile_s, "rb") as file_in:
-                    fit_data_s = pickle.load(file_in)
-
                 for ir, reim in enumerate(["real", "imag"]):
+                    # if False:
                     print(reim)
                     # ======================================================================
                     # fit to the ratio of 3pt and 2pt functions with a two-exponential function
@@ -2036,12 +2007,11 @@ def fit_3point_loop_n2sig(
                         ratio_fit_boot,
                         fit_param_ratio_avg,
                         redchisq_ratio,
-                        best_fit_n,
-                        best_fit_s,
                     ) = fit_ratio_2exp(
                         full_ratio_list_reim[ir],
                         np.array([twoptfn_neutron, twoptfn_sigma]),
-                        [fit_data_n, fit_data_s],
+                        # [fit_data_n, fit_data_s],
+                        [fit_params_n, fit_params_s],
                         src_snk_times,
                         delta_t_list[imom],
                         tmin_choice[imom],
@@ -2065,31 +2035,6 @@ def fit_3point_loop_n2sig(
                     with open(datafile_ratio, "wb") as file_out:
                         pickle.dump(fit_params_ratio, file_out)
 
-                    # ======================================================================
-                    # Plot the results of the fit to the ratio
-                    plot_ratio_fit(
-                        full_ratio_list_reim[ir],
-                        ratio_fit_boot,
-                        delta_t_list[imom],
-                        src_snk_times,
-                        redchisq_ratio,
-                        fit_param_ratio_boot,
-                        plotdir,
-                        [mom, operators_tex[iop], pol, reim],
-                        title=f"{mom}/{pol}/ratio_fit_{reim}_{operator}_n2sig",
-                    )
-                    plot_ratio_fit_paper(
-                        full_ratio_list_reim[ir],
-                        ratio_fit_boot,
-                        delta_t_list[imom],
-                        src_snk_times,
-                        redchisq_ratio,
-                        fit_param_ratio_boot,
-                        plotdir,
-                        [mom, operators_tex[iop], pol, reim],
-                        title=f"{mom}/{pol}/ratio_fit_{reim}_{operator}_{mom}_n2sig_paper",
-                    )
-
     return
 
 
@@ -2107,7 +2052,7 @@ def fit_3point_loop_sig2n(
     tmin_choice_zero,
 ):
     """Loop over the operators and momenta"""
-
+    transition = "sig2n"
     src_snk_times = np.array([10, 13, 16])
     rel = "nr"
     for imom, mom in enumerate(momenta):
@@ -2125,6 +2070,30 @@ def fit_3point_loop_sig2n(
 
         twoptfn_sigma_real = twoptfn_sigma[:, :, 0]
         twoptfn_neutron_real = twoptfn_neutron[:, :, 0]
+
+        # ======================================================================
+        # Read the results of the fit to the two-point functions
+        kappa_combs = ["kp121040kp121040", "kp121040kp120620"]
+        datafile_n = datadir / Path(
+            f"{kappa_combs[0]}_p+0+0+0_{rel}_fitlist_2pt_2exp.pkl"
+        )
+        with open(datafile_n, "rb") as file_in:
+            fit_data_n = pickle.load(file_in)
+        datafile_s = datadir / Path(
+            f"{kappa_combs[1]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
+        )
+        with open(datafile_s, "rb") as file_in:
+            fit_data_s = pickle.load(file_in)
+
+        # Pick out the chosen 2pt fn fits
+        best_fit_n, best_fit_s, fit_params_n, fit_params_s = select_2pt_fit(
+            [fit_data_n, fit_data_s],
+            tmin_choice[imom],
+            tmin_choice_zero,
+            datadir,
+            mom,
+            transition,
+        )
 
         for iop, operator in enumerate(operators):
             print(f"\n{operator}")
@@ -2168,37 +2137,8 @@ def fit_3point_loop_sig2n(
                     ],
                 ]
 
-                # ======================================================================
-                # plot the real part of the 3pt fn ratio
-                # plot_all_ratios(
-                #     full_ratio_list_reim[0],
-                #     src_snk_times,
-                #     plotdir,
-                #     [mom, operators_tex[iop], pol],
-                #     title=f"{mom}/{pol}/full_ratios_real_{operator}",
-                # )
-
-                # ======================================================================
-                # Read the results of the fit to the two-point functions
-
-                kappa_combs = [
-                    "kp121040kp121040",
-                    "kp121040kp120620",
-                    "kp120620kp121040",
-                    "kp120620kp120620",
-                ]
-                datafile_n = datadir / Path(
-                    f"{kappa_combs[0]}_p+0+0+0_{rel}_fitlist_2pt_2exp.pkl"
-                )
-                with open(datafile_n, "rb") as file_in:
-                    fit_data_n = pickle.load(file_in)
-                datafile_s = datadir / Path(
-                    f"{kappa_combs[1]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
-                )
-                with open(datafile_s, "rb") as file_in:
-                    fit_data_s = pickle.load(file_in)
-
                 for ir, reim in enumerate(["real", "imag"]):
+                    # if False:
                     print(reim)
                     # ======================================================================
                     # fit to the ratio of 3pt and 2pt functions with a two-exponential function
@@ -2208,12 +2148,10 @@ def fit_3point_loop_sig2n(
                         ratio_fit_boot,
                         fit_param_ratio_avg,
                         redchisq_ratio,
-                        best_fit_n,
-                        best_fit_s,
                     ) = fit_ratio_2exp(
                         full_ratio_list_reim[ir],
                         np.array([twoptfn_sigma, twoptfn_neutron]),
-                        [fit_data_s, fit_data_n],
+                        [fit_params_n, fit_params_s],
                         src_snk_times,
                         delta_t_list[imom],
                         tmin_choice[imom],
@@ -2236,31 +2174,6 @@ def fit_3point_loop_sig2n(
                     )
                     with open(datafile_ratio, "wb") as file_out:
                         pickle.dump(fit_params_ratio, file_out)
-
-                    # ======================================================================
-                    # Plot the results of the fit to the ratio
-                    plot_ratio_fit(
-                        full_ratio_list_reim[ir],
-                        ratio_fit_boot,
-                        delta_t_list[imom],
-                        src_snk_times,
-                        redchisq_ratio,
-                        fit_param_ratio_boot,
-                        plotdir,
-                        [mom, operators_tex[iop], pol, reim],
-                        title=f"{mom}/{pol}/ratio_fit_{reim}_{operator}_sig2n",
-                    )
-                    plot_ratio_fit_paper(
-                        full_ratio_list_reim[ir],
-                        ratio_fit_boot,
-                        delta_t_list[imom],
-                        src_snk_times,
-                        redchisq_ratio,
-                        fit_param_ratio_boot,
-                        plotdir,
-                        [mom, operators_tex[iop], pol, reim],
-                        title=f"{mom}/{pol}/ratio_fit_{reim}_{operator}_{mom}_sig2n_paper",
-                    )
 
     return
 
@@ -2317,19 +2230,6 @@ def plot_3point_loop_n2sig(
                 threeptfn_t16 = read_pickle(threeptfn_pickle_t16, nboot=500, nbin=1)
 
                 # ======================================================================
-                # Construct the simple ratio of 3pt and 2pt functions
-                ratio_t10 = np.einsum(
-                    "ijk,i->ijk", threeptfn_t10, twoptfn_sigma_real[:, 10] ** (-1)
-                )
-                ratio_t13 = np.einsum(
-                    "ijk,i->ijk", threeptfn_t13, twoptfn_sigma_real[:, 13] ** (-1)
-                )
-                ratio_t16 = np.einsum(
-                    "ijk,i->ijk", threeptfn_t16, twoptfn_sigma_real[:, 16] ** (-1)
-                )
-                simple_ratio_list = np.array([ratio_t10, ratio_t13, ratio_t16])
-
-                # ======================================================================
                 # Construct the full ratio of 3pt and 2pt functions
                 ratio_full_t10 = make_full_ratio(
                     threeptfn_t10, twoptfn_sigma_real, twoptfn_neutron_real, 10
@@ -2352,20 +2252,6 @@ def plot_3point_loop_n2sig(
                         ratio_full_t16[:, :, 1],
                     ],
                 ]
-
-                # ======================================================================
-                # Read the results of the fit to the two-point functions
-                kappa_combs = ["kp121040kp121040", "kp121040kp120620"]
-                datafile_n = datadir / Path(
-                    f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
-                )
-                with open(datafile_n, "rb") as file_in:
-                    fit_data_n = pickle.load(file_in)
-                datafile_s = datadir / Path(
-                    f"{kappa_combs[1]}_p+0+0+0_{rel}_fitlist_2pt_2exp.pkl"
-                )
-                with open(datafile_s, "rb") as file_in:
-                    fit_data_s = pickle.load(file_in)
 
                 for ir, reim in enumerate(["real", "imag"]):
                     print(reim)
@@ -2488,20 +2374,6 @@ def plot_3point_loop_sig2n(
                         ratio_full_t16[:, :, 1],
                     ],
                 ]
-                # ======================================================================
-                # Read the results of the fit to the two-point functions
-
-                kappa_combs = ["kp121040kp121040", "kp121040kp120620"]
-                datafile_n = datadir / Path(
-                    f"{kappa_combs[0]}_p+0+0+0_{rel}_fitlist_2pt_2exp.pkl"
-                )
-                with open(datafile_n, "rb") as file_in:
-                    fit_data_n = pickle.load(file_in)
-                datafile_s = datadir / Path(
-                    f"{kappa_combs[1]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
-                )
-                with open(datafile_s, "rb") as file_in:
-                    fit_data_s = pickle.load(file_in)
 
                 for ir, reim in enumerate(["real", "imag"]):
                     print(reim)
@@ -2694,6 +2566,30 @@ def fit_3point_zeromom(
         twoptfn_sigma_real = twoptfn_sigma[:, :, 0]
         twoptfn_neutron_real = twoptfn_neutron[:, :, 0]
 
+        # ======================================================================
+        # Read the results of the fit to the two-point functions
+        kappa_combs = ["kp121040kp121040", "kp121040kp120620"]
+        datafile_n = datadir / Path(
+            f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
+        )
+        with open(datafile_n, "rb") as file_in:
+            fit_data_n = pickle.load(file_in)
+        datafile_s = datadir / Path(
+            f"{kappa_combs[1]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
+        )
+        with open(datafile_s, "rb") as file_in:
+            fit_data_s = pickle.load(file_in)
+
+        # Pick out the chosen 2pt fn fits
+        best_fit_n, best_fit_s, fit_params_n, fit_params_s = select_2pt_fit(
+            [fit_data_n, fit_data_s],
+            tmin_choice[imom],
+            tmin_choice[imom],
+            datadir,
+            mom,
+            "zeromom",
+        )
+
         for iop, operator in enumerate(operators):
             print(f"\n{operator}")
             for ipol, pol in enumerate(polarizations):
@@ -2773,30 +2669,207 @@ def fit_3point_zeromom(
                     ],
                 ]
 
-                # ======================================================================
-                # plot the real part of the 3pt fn ratio
-                plot_all_ratios(
-                    full_ratio_list_reim[0],
-                    src_snk_times,
-                    plotdir,
-                    [mom, operators_tex[iop], pol],
-                    title=f"{mom}/{pol}/double_ratios_real_{operator}",
+                for ir, reim in enumerate(["real"]):
+                    print(reim)
+                    # ======================================================================
+                    # fit to the ratio of 3pt and 2pt functions with a two-exponential function
+                    fitfnc_2exp = double_threept_ratio
+                    (
+                        fit_param_ratio_boot,
+                        ratio_fit_boot,
+                        fit_param_ratio_avg,
+                        redchisq_ratio,
+                    ) = fit_ratio_2exp(
+                        full_ratio_list_reim[ir],
+                        np.array([twoptfn_neutron, twoptfn_sigma]),
+                        [fit_params_n, fit_params_s],
+                        src_snk_times,
+                        delta_t_list[imom],
+                        tmin_choice[imom],
+                        tmin_choice[imom],
+                        datadir,
+                        fitfnc_2exp,
+                    )
+                    fit_params_ratio = [
+                        fit_param_ratio_boot,
+                        ratio_fit_boot,
+                        fit_param_ratio_avg,
+                        redchisq_ratio,
+                        best_fit_n,
+                        best_fit_s,
+                    ]
+
+                    # Save the fit results to pickle files
+                    # print(f"{fit_params_ratio[0][:,0]=}")
+                    datafile_ratio = datadir / Path(
+                        f"{mom}_{operator}_{pol}_{rel}_{reim}_double_3pt_ratio_fit.pkl"
+                    )
+                    with open(datafile_ratio, "wb") as file_out:
+                        pickle.dump(fit_params_ratio, file_out)
+
+                    # ======================================================================
+                    # Plot the results of the fit to the ratio
+                    plot_ratio_fit(
+                        full_ratio_list_reim[ir],
+                        ratio_fit_boot,
+                        delta_t_list[imom],
+                        src_snk_times,
+                        redchisq_ratio,
+                        fit_param_ratio_boot,
+                        plotdir,
+                        [mom, operators_tex[iop], pol, reim],
+                        title=f"{mom}/{pol}/double_ratio_fit_{reim}_{operator}",
+                    )
+                    # ======================================================================
+                    # Plot the results of the fit to the ratio
+                    plot_ratio_fit_paper(
+                        full_ratio_list_reim[ir],
+                        ratio_fit_boot,
+                        delta_t_list[imom],
+                        src_snk_times,
+                        redchisq_ratio,
+                        fit_param_ratio_boot,
+                        plotdir,
+                        [mom, operators_tex[iop], pol, reim],
+                        title=f"{mom}/{pol}/double_ratio_fit_{reim}_{operator}_{mom}_paper",
+                    )
+    return
+
+
+def plot_3point_zeromom(
+    latticedir,
+    resultsdir,
+    plotdir,
+    datadir,
+    operators,
+    operators_tex,
+    polarizations,
+    momenta,
+    delta_t_list,
+    tmin_choice,
+):
+    """Loop over the operators and momenta"""
+
+    src_snk_times = np.array([10, 13, 16])
+    rel = "nr"
+    for imom, mom in enumerate(momenta):
+        print(f"\n{mom}")
+        # ======================================================================
+        # Read the two-point function data
+        twoptfn_filename_sigma = latticedir / Path(
+            f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp120620/sh_gij_p21_90-sh_gij_p21_90/{mom}/barspec_nucleon_{rel}_500cfgs.pickle"
+        )
+        twoptfn_filename_neutron = latticedir / Path(
+            f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/kp121040kp121040/sh_gij_p21_90-sh_gij_p21_90/{mom}/barspec_nucleon_{rel}_500cfgs.pickle"
+        )
+        twoptfn_sigma = read_pickle(twoptfn_filename_sigma, nboot=500, nbin=1)
+        twoptfn_neutron = read_pickle(twoptfn_filename_neutron, nboot=500, nbin=1)
+
+        twoptfn_sigma_real = twoptfn_sigma[:, :, 0]
+        twoptfn_neutron_real = twoptfn_neutron[:, :, 0]
+
+        # ======================================================================
+        # Read the results of the fit to the two-point functions
+        kappa_combs = ["kp121040kp121040", "kp121040kp120620"]
+        datafile_n = datadir / Path(
+            f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
+        )
+        with open(datafile_n, "rb") as file_in:
+            fit_data_n = pickle.load(file_in)
+        datafile_s = datadir / Path(
+            f"{kappa_combs[1]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
+        )
+        with open(datafile_s, "rb") as file_in:
+            fit_data_s = pickle.load(file_in)
+
+        # Pick out the chosen 2pt fn fits
+        best_fit_n, best_fit_s, fit_params_n, fit_params_s = select_2pt_fit(
+            [fit_data_n, fit_data_s],
+            tmin_choice[imom],
+            tmin_choice[imom],
+            datadir,
+            mom,
+            "zeromom",
+        )
+
+        for iop, operator in enumerate(operators):
+            print(f"\n{operator}")
+            for ipol, pol in enumerate(polarizations):
+                print(f"\n{pol}")
+                # Read in the 3pt function data
+                threeptfn_n2sig_pickle_t10 = latticedir / Path(
+                    f"bar3ptfn_t10/bar3ptfn/32x64/unpreconditioned_slrc/kp121040tkp120620_kp121040/NUCL_D_{pol}_NONREL_gI_t10/sh_gij_p21_90-sh_gij_p21_90/{mom}/bar3ptfn_{operator}_500cfgs.pickle"
+                )
+                threeptfn_n2sig_pickle_t13 = latticedir / Path(
+                    f"bar3ptfn_t13/bar3ptfn/32x64/unpreconditioned_slrc/kp121040tkp120620_kp121040/NUCL_D_{pol}_NONREL_gI_t13/sh_gij_p21_90-sh_gij_p21_90/{mom}/bar3ptfn_{operator}_500cfgs.pickle"
+                )
+                threeptfn_n2sig_pickle_t16 = latticedir / Path(
+                    f"bar3ptfn_t16/bar3ptfn/32x64/unpreconditioned_slrc/kp121040tkp120620_kp121040/NUCL_D_{pol}_NONREL_gI_t16/sh_gij_p21_90-sh_gij_p21_90/{mom}/bar3ptfn_{operator}_500cfgs.pickle"
+                )
+                threeptfn_n2sig_t10 = read_pickle(
+                    threeptfn_n2sig_pickle_t10, nboot=500, nbin=1
+                )
+                threeptfn_n2sig_t13 = read_pickle(
+                    threeptfn_n2sig_pickle_t13, nboot=500, nbin=1
+                )
+                threeptfn_n2sig_t16 = read_pickle(
+                    threeptfn_n2sig_pickle_t16, nboot=500, nbin=1
+                )
+
+                threeptfn_sig2n_pickle_t10 = latticedir / Path(
+                    f"sig2n/bar3ptfn_t10/bar3ptfn/32x64/unpreconditioned_slrc/kp120620tkp121040_kp121040/NUCL_D_{pol}_NONREL_gI_t10/sh_gij_p21_90-sh_gij_p21_90/{mom}/bar3ptfn_{operator}_500cfgs.pickle"
+                )
+                threeptfn_sig2n_pickle_t13 = latticedir / Path(
+                    f"sig2n/bar3ptfn_t13/bar3ptfn/32x64/unpreconditioned_slrc/kp120620tkp121040_kp121040/NUCL_D_{pol}_NONREL_gI_t13/sh_gij_p21_90-sh_gij_p21_90/{mom}/bar3ptfn_{operator}_500cfgs.pickle"
+                )
+                threeptfn_sig2n_pickle_t16 = latticedir / Path(
+                    f"sig2n/bar3ptfn_t16/bar3ptfn/32x64/unpreconditioned_slrc/kp120620tkp121040_kp121040/NUCL_D_{pol}_NONREL_gI_t16/sh_gij_p21_90-sh_gij_p21_90/{mom}/bar3ptfn_{operator}_500cfgs.pickle"
+                )
+                threeptfn_sig2n_t10 = read_pickle(
+                    threeptfn_sig2n_pickle_t10, nboot=500, nbin=1
+                )
+                threeptfn_sig2n_t13 = read_pickle(
+                    threeptfn_sig2n_pickle_t13, nboot=500, nbin=1
+                )
+                threeptfn_sig2n_t16 = read_pickle(
+                    threeptfn_sig2n_pickle_t16, nboot=500, nbin=1
                 )
 
                 # ======================================================================
-                # Read the results of the fit to the two-point functions
-
-                kappa_combs = ["kp121040kp121040", "kp121040kp120620"]
-                datafile_n = datadir / Path(
-                    f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
+                # Construct the full ratio of 3pt and 2pt functions
+                ratio_full_t10 = make_double_ratio(
+                    threeptfn_n2sig_t10,
+                    threeptfn_sig2n_t10,
+                    twoptfn_sigma_real,
+                    twoptfn_neutron_real,
+                    10,
                 )
-                with open(datafile_n, "rb") as file_in:
-                    fit_data_n = pickle.load(file_in)
-                datafile_s = datadir / Path(
-                    f"{kappa_combs[1]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
+                ratio_full_t13 = make_double_ratio(
+                    threeptfn_n2sig_t13,
+                    threeptfn_sig2n_t13,
+                    twoptfn_sigma_real,
+                    twoptfn_neutron_real,
+                    13,
                 )
-                with open(datafile_s, "rb") as file_in:
-                    fit_data_s = pickle.load(file_in)
+                ratio_full_t16 = make_double_ratio(
+                    threeptfn_n2sig_t16,
+                    threeptfn_sig2n_t16,
+                    twoptfn_sigma_real,
+                    twoptfn_neutron_real,
+                    16,
+                )
+                full_ratio_list_reim = [
+                    [
+                        ratio_full_t10[:, :, 0],
+                        ratio_full_t13[:, :, 0],
+                        ratio_full_t16[:, :, 0],
+                    ],
+                    [
+                        ratio_full_t10[:, :, 1],
+                        ratio_full_t13[:, :, 1],
+                        ratio_full_t16[:, :, 1],
+                    ],
+                ]
 
                 for ir, reim in enumerate(["real"]):
                     print(reim)
@@ -2808,12 +2881,10 @@ def fit_3point_zeromom(
                         ratio_fit_boot,
                         fit_param_ratio_avg,
                         redchisq_ratio,
-                        best_fit_n,
-                        best_fit_s,
                     ) = fit_ratio_2exp(
                         full_ratio_list_reim[ir],
                         np.array([twoptfn_neutron, twoptfn_sigma]),
-                        [fit_data_n, fit_data_s],
+                        [fit_params_n, fit_params_s],
                         src_snk_times,
                         delta_t_list[imom],
                         tmin_choice[imom],
@@ -2940,21 +3011,6 @@ def plot_3point_loop(
                         ratio_full_t16[:, :, 1],
                     ],
                 ]
-
-                # ======================================================================
-                # Read the results of the fit to the two-point functions
-                kappa_combs = ["kp121040kp121040", "kp121040kp120620"]
-                datafile_n = datadir / Path(
-                    f"{kappa_combs[0]}_{mom}_{rel}_fitlist_2pt_2exp.pkl"
-                )
-                datafile_s = datadir / Path(
-                    f"{kappa_combs[1]}_p+0+0+0_{rel}_fitlist_2pt_2exp.pkl"
-                )
-
-                with open(datafile_n, "rb") as file_in:
-                    fit_data_n = pickle.load(file_in)
-                with open(datafile_s, "rb") as file_in:
-                    fit_data_s = pickle.load(file_in)
 
                 for ir, reim in enumerate(["real", "imag"]):
                     print(reim)

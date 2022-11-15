@@ -37,39 +37,33 @@ _colors = [
 _fmts = ["s", "^", "o", ".", "p", "v", "P", ",", "*"]
 
 
-def fit_2ptfn_2exp(evxptdir, plotdir, datadir, rel="rel"):
+def fit_2ptfn_2exp(latticedir, plotdir, datadir, rel="rel"):
     """Read the two-point function and fit a two-exponential function to it over a range of fit windows, then save the fit data to pickle files."""
 
     kappa_combs = [
-        "kp121040kp120620",
         "kp121040kp121040",
+        "kp121040kp120620",
     ]
     momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
     fitfunction = fitfunc.initffncs("Twoexp_log")
     time_limits = [
-        [[1, 12], [25, 25]],
-        [[1, 9], [21, 21]],
-        [[1, 8], [18, 18]],
+        # [[1, 12], [26, 26]],
+        [[1, 12], [20, 20]],
+        [[1, 9], [20, 20]],
+        [[1, 8], [19, 19]],
     ]
 
     for ikappa, kappa in enumerate(kappa_combs):
         print(f"\n{kappa}")
         for imom, mom in enumerate(momenta):
             print(f"\n{mom}")
-            twopointfn_filename = evxptdir / Path(
+            twopointfn_filename = latticedir / Path(
                 f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/{kappa}/sh_gij_p21_90-sh_gij_p21_90/{mom}/barspec_nucleon_{rel}_500cfgs.pickle"
             )
             twopoint_fn = read_pickle(twopointfn_filename, nboot=500, nbin=1)
 
             # Plot the effective mass of the two-point function
             twopoint_fn_real = twopoint_fn[:, :, 0]
-            # stats.bs_effmass(
-            #     twopoint_fn_real,
-            #     time_axis=1,
-            #     plot=False,
-            #     show=False,
-            #     savefile=plotdir / Path(f"twopoint/{kappa}_{mom}_effmass_2pt_fn.pdf"),
-            # )
             fitlist_2pt = stats.fit_loop_bayes(
                 twopoint_fn_real,
                 fitfunction,
@@ -78,6 +72,7 @@ def fit_2ptfn_2exp(evxptdir, plotdir, datadir, rel="rel"):
                 disp=True,
                 time=False,
                 weights_=True,
+                timeslice=17,
             )
 
             datafile = datadir / Path(f"{kappa}_{mom}_{rel}_fitlist_2pt_2exp.pkl")
@@ -86,7 +81,7 @@ def fit_2ptfn_2exp(evxptdir, plotdir, datadir, rel="rel"):
     return
 
 
-def fit_2ptfn_3exp(evxptdir, plotdir, datadir, rel="rel"):
+def fit_2ptfn_3exp(latticedir, plotdir, datadir, rel="rel"):
     """Read the two-point function and fit a two-exponential function to it over a range of fit windows, then save the fit data to pickle files."""
 
     kappa_combs = [
@@ -96,16 +91,21 @@ def fit_2ptfn_3exp(evxptdir, plotdir, datadir, rel="rel"):
     momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
     fitfunction = fitfunc.initffncs("Threeexp_log")
     time_limits = [
-        [[1, 12], [25, 25]],
-        [[1, 9], [21, 21]],
-        [[1, 8], [18, 18]],
+        [[1, 12], [20, 20]],
+        [[1, 9], [20, 20]],
+        [[1, 8], [19, 19]],
     ]
+    # time_limits = [
+    #     [[1, 12], [25, 25]],
+    #     [[1, 9], [21, 21]],
+    #     [[1, 8], [18, 18]],
+    # ]
 
     for ikappa, kappa in enumerate(kappa_combs):
         print(f"\n{kappa}")
         for imom, mom in enumerate(momenta):
             print(f"\n{mom}")
-            twopointfn_filename = evxptdir / Path(
+            twopointfn_filename = latticedir / Path(
                 f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/{kappa}/sh_gij_p21_90-sh_gij_p21_90/{mom}/barspec_nucleon_{rel}_500cfgs.pickle"
             )
             twopoint_fn = read_pickle(twopointfn_filename, nboot=500, nbin=1)
@@ -127,6 +127,7 @@ def fit_2ptfn_3exp(evxptdir, plotdir, datadir, rel="rel"):
                 disp=True,
                 time=False,
                 weights_=True,
+                timeslice=17,
             )
 
             datafile = datadir / Path(f"{kappa}_{mom}_{rel}_fitlist_2pt_3exp.pkl")
@@ -145,7 +146,7 @@ def plot_2pt_2exp_fit(
     """Plot the effective energy of the twopoint functions and their fits"""
 
     fitfunction = fitfunc.initffncs("Twoexp_log").eval
-    tmin_choice_sigma = 5
+    tmin_choice_sigma = 4
     weight_tol = 0.01
     # print([i for i in fit_data_list[0][0]])
     fitweights_n = np.array([fit["weight"] for fit in fit_data_list[0]])
@@ -225,7 +226,8 @@ def plot_2pt_2exp_fit(
         color=_colors[1],
     )
     plt.legend()
-    plt.ylim(0.3, 1.5)
+    # plt.ylim(0.3, 1.5)
+    plt.ylim(0.38, 0.8)
     plt.xlabel(r"$t_{\textrm{min}}$")
     plt.ylabel(r"$E_i$")
     savefile = plotdir / Path(f"twopoint/energies_{title}_n_2exp.pdf")
@@ -288,7 +290,8 @@ def plot_2pt_2exp_fit(
         color=_colors[1],
     )
     plt.legend()
-    plt.ylim(0.3, 1.5)
+    # plt.ylim(0.3, 1.5)
+    plt.ylim(0.38, 0.8)
     plt.xlabel(r"$t_{\textrm{min}}$")
     plt.ylabel(r"$E_i$")
     savefile = plotdir / Path(f"twopoint/energies_{title}_s_2exp.pdf")
@@ -305,7 +308,7 @@ def plot_2pt_2exp_fit(
     )
     fit_result_eff_energy_n = stats.bs_effmass(fit_result)
 
-    plt.figure(figsize=(6, 5))
+    plt.figure(figsize=(6, 4))
     plt.errorbar(
         efftime,
         np.average(eff_energy_n, axis=0),
@@ -315,8 +318,9 @@ def plot_2pt_2exp_fit(
         color=_colors[0],
         fmt="s",
     )
-    plt.xlim(0, 22)
+    plt.xlim(0, 26)
     plt.ylim(0, 1)
+    print(f"{best_fit_n['x']=}")
     plt.plot(
         best_fit_n["x"][:-1],
         np.average(fit_result_eff_energy_n, axis=0),
@@ -333,10 +337,15 @@ def plot_2pt_2exp_fit(
         alpha=0.3,
         linewidth=0,
     )
+    plt.xlabel(r"$t$")
+    plt.ylabel(r"$E_{\textrm{eff}}$")
     plt.legend()
+    plt.grid(True, alpha=0.3)
     savefile = plotdir / Path(f"twopoint/bestfit_{title}_n_2exp.pdf")
+    savefile2 = plotdir / Path(f"twopoint/bestfit_{title}_n_2exp.png")
     savefile.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(savefile)
+    plt.savefig(savefile2, dpi=500)
     plt.close()
 
     # ======================================================================
@@ -347,7 +356,7 @@ def plot_2pt_2exp_fit(
     )
     fit_result_eff_energy_s = stats.bs_effmass(fit_result)
 
-    plt.figure(figsize=(6, 5))
+    plt.figure(figsize=(6, 4))
     plt.errorbar(
         efftime,
         np.average(eff_energy_s, axis=0),
@@ -357,7 +366,7 @@ def plot_2pt_2exp_fit(
         color=_colors[0],
         fmt="s",
     )
-    plt.xlim(0, 22)
+    plt.xlim(0, 26)
     plt.ylim(0, 1)
     plt.plot(
         best_fit_s["x"][:-1],
@@ -376,9 +385,13 @@ def plot_2pt_2exp_fit(
         linewidth=0,
     )
     plt.legend()
+    plt.xlabel(r"$t$")
+    plt.ylabel(r"$E_{\textrm{eff}}$")
     savefile = plotdir / Path(f"twopoint/bestfit_{title}_s_2exp.pdf")
+    savefile2 = plotdir / Path(f"twopoint/bestfit_{title}_s_2exp.png")
     savefile.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(savefile)
+    plt.savefig(savefile2, dpi=500)
     plt.close()
 
     return
@@ -460,7 +473,8 @@ def plot_fit_loop_energies(
         color=_colors[1],
     )
     plt.legend()
-    plt.ylim(0.3, 1.5)
+    # plt.ylim(0.3, 1.5)
+    plt.ylim(0.38, 0.8)
     plt.xlabel(r"$t_{\textrm{min}}$")
     plt.ylabel(r"$E_i$")
     savefile = plotdir / Path(f"twopoint/energies_{title}_2exp.pdf")
@@ -570,7 +584,7 @@ def plot_2pt_3exp_fit(
     # prior_1_n_min = priors[0] + np.exp(priors[1] - 0.5)
     # prior_1_n_max = priors[0] + np.exp(priors[1] + 0.5)
 
-    plt.figure(figsize=(6, 5))
+    plt.figure(figsize=(6, 4))
     plt.errorbar(
         fit_tmin_n,
         energies_n_avg[:, 0],
@@ -620,12 +634,15 @@ def plot_2pt_3exp_fit(
         color=_colors[1],
     )
     plt.legend()
-    plt.ylim(0, 1.5)
+    # plt.ylim(0, 1.5)
+    plt.ylim(0.38, 1.1)
     plt.xlabel(r"$t_{\textrm{min}}$")
     plt.ylabel(r"$E_i$")
     savefile = plotdir / Path(f"twopoint/energies_{title}_n_3exp.pdf")
+    savefile2 = plotdir / Path(f"twopoint/energies_{title}_n_3exp.png")
     savefile.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(savefile)
+    plt.savefig(savefile2, dpi=500)
     # plt.show()
     plt.close()
 
@@ -649,7 +666,7 @@ def plot_2pt_3exp_fit(
     # prior_1_s_min = priors[0] + np.exp(priors[1] - 0.5)
     # prior_1_s_max = priors[0] + np.exp(priors[1] + 0.5)
 
-    plt.figure(figsize=(6, 5))
+    plt.figure(figsize=(6, 4))
     plt.errorbar(
         fit_tmin_s,
         energies_s_avg[:, 0],
@@ -698,13 +715,17 @@ def plot_2pt_3exp_fit(
         linewidth=0,
         color=_colors[1],
     )
-    plt.legend()
-    plt.ylim(0, 1.5)
+    plt.legend(fontsize="x-small")
+    # plt.ylim(0, 1.5)
+    plt.ylim(0.38, 1.1)
+    # plt.ylim(0.38, 1.0)
     plt.xlabel(r"$t_{\textrm{min}}$")
     plt.ylabel(r"$E_i$")
-    savefile = plotdir / Path(f"twopoint/energies_p+0+0+0_s_3exp.pdf")
+    savefile = plotdir / Path(f"twopoint/energies_{title}_s_3exp.pdf")
+    savefile2 = plotdir / Path(f"twopoint/energies_{title}_s_3exp.png")
     savefile.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(savefile)
+    plt.savefig(savefile2, dpi=500)
     # plt.show()
     plt.close()
 
@@ -787,7 +808,7 @@ def plot_2pt_3exp_fit(
         linewidth=0,
     )
     plt.legend()
-    savefile = plotdir / Path(f"twopoint/bestfit_p+0+0+0_s_3exp.pdf")
+    savefile = plotdir / Path(f"twopoint/bestfit_{title}_s_3exp.pdf")
     savefile.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(savefile)
     plt.close()
@@ -795,7 +816,7 @@ def plot_2pt_3exp_fit(
     return
 
 
-def read_2pt_fits_2exp(evxptdir, plotdir, datadir, momenta, rel, tmin_choice):
+def read_2pt_fits_2exp(latticedir, plotdir, datadir, momenta, rel, tmin_choice):
     # momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
     # tmin_choice = [5, 3, 3]
     for imom, mom in enumerate(momenta):
@@ -825,7 +846,7 @@ def read_2pt_fits_2exp(evxptdir, plotdir, datadir, momenta, rel, tmin_choice):
         )
 
 
-def read_2pt_fits_3exp(evxptdir, plotdir, datadir, momenta, rel, tmin_choice):
+def read_2pt_fits_3exp(latticedir, plotdir, datadir, momenta, rel, tmin_choice):
     # momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
     # tmin_choice = [5, 3, 3]
     for imom, mom in enumerate(momenta):
@@ -841,7 +862,7 @@ def read_2pt_fits_3exp(evxptdir, plotdir, datadir, momenta, rel, tmin_choice):
             fit_data_n = pickle.load(file_in)
 
         datafile_s = datadir / Path(
-            f"{kappa_combs[1]}_p+0+0+0_{rel}_fitlist_2pt_3exp.pkl"
+            f"{kappa_combs[1]}_{mom}_{rel}_fitlist_2pt_3exp.pkl"
         )
         with open(datafile_s, "rb") as file_in:
             fit_data_s = pickle.load(file_in)
@@ -860,7 +881,7 @@ def main():
     plt.rc("text.latex", preamble=r"\usepackage{physics}")
 
     # --- directories ---
-    evxptdir = Path.home() / Path(
+    latticedir = Path.home() / Path(
         "Documents/PhD/lattice_results/transition_3pt_function/"
     )
     resultsdir = Path.home() / Path(
@@ -876,16 +897,17 @@ def main():
 
     momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
     # tmin_choice = [5, 4, 4]
-    tmin_choice = [7, 7, 7]
+    # tmin_choice = [7, 7, 7]
+    tmin_choice = [4, 4, 4]
 
     # ======================================================================
     # Read the two-point functions and fit a two-exponential function to it
 
-    # fit_2ptfn_2exp(evxptdir, plotdir, datadir, rel="nr")
-    # fit_2ptfn_3exp(evxptdir, plotdir, datadir, rel="nr")
+    # fit_2ptfn_2exp(latticedir, plotdir, datadir, rel="nr")
+    # fit_2ptfn_3exp(latticedir, plotdir, datadir, rel="nr")
 
-    read_2pt_fits_2exp(evxptdir, plotdir, datadir, momenta, "nr", tmin_choice)
-    # read_2pt_fits_3exp(evxptdir, plotdir, datadir, momenta, "nr", tmin_choice)
+    read_2pt_fits_2exp(latticedir, plotdir, datadir, momenta, "nr", tmin_choice)
+    read_2pt_fits_3exp(latticedir, plotdir, datadir, momenta, "nr", tmin_choice)
 
 
 if __name__ == "__main__":
