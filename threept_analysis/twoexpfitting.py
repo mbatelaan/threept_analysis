@@ -60,17 +60,12 @@ def select_2pt_fit(
 
 def fit_ratio_2exp(
     ratio_list,
-    twoptfn_list,
     fit_data_list,
     src_snk_times,
     delta_t,
-    tmin_choice_nucl,
-    tmin_choice_sigma,
-    datadir,
     fitfnc_2exp,
 ):
     """Fit to the three-point function with a two-exponential function, which includes parameters from the two-point functions"""
-    # tmin_choice_sigma = 5
     twopt_fit_params_n, twopt_fit_params_s = fit_data_list
 
     # Set the parameters from the twoptfn
@@ -602,14 +597,9 @@ def fit_3point_loop_n2sig(
                         redchisq_ratio,
                     ) = fit_ratio_2exp(
                         full_ratio_list_reim[ir],
-                        np.array([twoptfn_neutron, twoptfn_sigma]),
-                        # [fit_data_n, fit_data_s],
                         [fit_params_n, fit_params_s],
                         src_snk_times,
                         delta_t_list[imom],
-                        tmin_choice[imom],
-                        tmin_choice_zero,
-                        datadir,
                         fitfnc_2exp,
                     )
                     fit_params_ratio = [
@@ -743,13 +733,9 @@ def fit_3point_loop_sig2n(
                         redchisq_ratio,
                     ) = fit_ratio_2exp(
                         full_ratio_list_reim[ir],
-                        np.array([twoptfn_sigma, twoptfn_neutron]),
                         [fit_params_n, fit_params_s],
                         src_snk_times,
                         delta_t_list[imom],
-                        tmin_choice[imom],
-                        tmin_choice_zero,
-                        datadir,
                         fitfnc_2exp,
                     )
                     fit_params_ratio = [
@@ -918,13 +904,9 @@ def fit_3point_zeromom(
                         redchisq_ratio,
                     ) = fit_ratio_2exp(
                         full_ratio_list_reim[ir],
-                        np.array([twoptfn_neutron, twoptfn_sigma]),
                         [fit_params_n, fit_params_s],
                         src_snk_times,
                         delta_t_list[imom],
-                        tmin_choice[imom],
-                        tmin_choice[imom],
-                        datadir,
                         fitfnc_2exp,
                     )
                     fit_params_ratio = [
@@ -1364,13 +1346,9 @@ def plot_3point_zeromom(
                         redchisq_ratio,
                     ) = fit_ratio_2exp(
                         full_ratio_list_reim[ir],
-                        np.array([twoptfn_neutron, twoptfn_sigma]),
                         [fit_params_n, fit_params_s],
                         src_snk_times,
                         delta_t_list[imom],
-                        tmin_choice[imom],
-                        tmin_choice[imom],
-                        datadir,
                         fitfnc_2exp,
                     )
                     fit_params_ratio = [
@@ -1450,6 +1428,8 @@ def get_Qsquared_values(datadir, tmin_choices_nucl, tmin_choices_sigm):
     )[0][0]
     best_fit_n_mom0 = fit_data_n_mom0[chosen_time_n]
     energy_n_mom0 = np.average(best_fit_n_mom0["param"][:, 1])
+    print(f"{energy_n_mom0=}")
+
     # Sigma
     fit_times_s = [fit["x"] for fit in fit_data_s_mom0]
     chosen_time_s = np.where(
@@ -1476,11 +1456,14 @@ def get_Qsquared_values(datadir, tmin_choices_nucl, tmin_choices_sigm):
         # Extract the chosen fit's energy from the data
         # Neutron
         fit_times_n = [fit["x"] for fit in fit_data_n]
+        energies_n = [np.average(fit["param"][:, 1]) for fit in fit_data_n]
+        print(f"{energies_n=}")
         chosen_time_n = np.where(
             [times[0] == tmin_choices_nucl[imom] for times in fit_times_n]
         )[0][0]
         best_fit_n = fit_data_n[chosen_time_n]
         energy_n = np.average(best_fit_n["param"][:, 1])
+
         # Sigma
         fit_times_s = [fit["x"] for fit in fit_data_s]
         chosen_time_s = np.where(
@@ -1497,6 +1480,10 @@ def get_Qsquared_values(datadir, tmin_choices_nucl, tmin_choices_sigm):
         )
         qsquared_sig2n_list.append(sig2n_Qsq)
         qsquared_n2sig_list.append(n2sig_Qsq)
+        print("\n\n")
+        print(f"{energy_s=}")
+        print(f"{energy_n=}")
+
         print(f"{sig2n_Qsq=}")
         print(f"{n2sig_Qsq=}")
 
@@ -1568,7 +1555,8 @@ def main():
     momenta = ["p+0+0+0", "p+1+0+0", "p+1+1+0"]
     delta_t_list = [5, 5, 5]
     # tmin_choice = [5, 5, 5]
-    tmin_choice = [4, 4, 4]
+    # tmin_choice = [4, 4, 4]
+    tmin_choice = [4, 5, 6]
     # tmin_choice = [7, 7, 7]
 
     # ======================================================================

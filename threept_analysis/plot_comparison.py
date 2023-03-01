@@ -14,6 +14,7 @@ from analysis import stats
 from analysis import fitfunc
 
 from gevpanalysis.util import read_config
+from threept_analysis.twoexpfitting import get_Qsquared_values
 
 _metadata = {"Author": "Mischa Batelaan", "Creator": __file__}
 
@@ -27,20 +28,30 @@ _metadata = {"Author": "Mischa Batelaan", "Creator": __file__}
 #     (0.8, 0.4, 0),
 #     (0.8, 0.6, 0.7),
 # ]
-
+# _colors = [
+#     (0, 0, 0),
+#     (0.95, 0.9, 0.25),
+#     (0.35, 0.7, 0.9),
+#     (0.9, 0.6, 0),
+#     (0, 0.6, 0.5),
+#     (0, 0.45, 0.7),
+#     (0.8, 0.4, 0),
+#     (0.8, 0.6, 0.7),
+# ]
 _colors = [
-    (0, 0, 0),
-    (0.95, 0.9, 0.25),
-    (0.35, 0.7, 0.9),
-    (0.9, 0.6, 0),
-    (0, 0.6, 0.5),
-    (0, 0.45, 0.7),
-    (0.8, 0.4, 0),
-    (0.8, 0.6, 0.7),
+    "#377eb8",
+    "#4daf4a",
+    "#f781bf",
+    "#a65628",
+    "#ff7f00",
+    "#984ea3",
+    "#999999",
+    "#e41a1c",
+    "#dede00",
 ]
 
-# _fmts = ["s", "^", "o", "p", "x", "v", "P", ",", "*", "."]
-_fmts = ["s", "p", "x", "^", "o", "v", "P", ",", "*", "."]
+_fmts = ["s", "^", "o", "p", "x", "v", "P", ",", "*", "."]
+# _fmts = ["s", "p", "x", "^", "o", "v", "P", ",", "*", "."]
 
 
 def read_pickle(filename, nboot=200, nbin=1):
@@ -295,38 +306,55 @@ def plot_ratio_fit_comp_paper(
         # label=labels[icorr],
     )
     axarr[3].plot(
-        FH_data["ratio_t_range"],
-        [np.average(FH_data["deltaE_fit"])] * len(FH_data["ratio_t_range"]),
+        # FH_data["ratio_t_range"],
+        plot_time3,
+        [np.average(FH_data["deltaE_fit"])]
+        * len(plot_time3),  # * len(FH_data["ratio_t_range"]),
         color=_colors[3],
     )
     axarr[3].fill_between(
-        FH_data["ratio_t_range"],
+        # FH_data["ratio_t_range"],
+        plot_time3,
         [np.average(FH_data["deltaE_fit"]) - np.std(FH_data["deltaE_fit"])]
-        * len(FH_data["ratio_t_range"]),
+        * len(plot_time3),
+        # * len(FH_data["ratio_t_range"]),
         [np.average(FH_data["deltaE_fit"]) + np.std(FH_data["deltaE_fit"])]
-        * len(FH_data["ratio_t_range"]),
+        * len(plot_time3),
+        # * len(FH_data["ratio_t_range"]),
         alpha=0.3,
         linewidth=0,
         color=_colors[7],
     )
 
-    axarr[3].axhline(
-        FH_data["FH_matrix_element"],
-        color=_colors[6],
-    )
-    axarr[3].fill_between(
-        plot_time3,
-        [FH_data["FH_matrix_element"] - FH_data["FH_matrix_element_err"]]
-        * len(plot_time3),
-        [FH_data["FH_matrix_element"] + FH_data["FH_matrix_element_err"]]
-        * len(plot_time3),
-        alpha=0.3,
-        linewidth=0,
-        color=_colors[6],
-    )
+    # axarr[3].axhline(
+    #     np.average(FH_data["FH_matrix_element"]),
+    #     color=_colors[6],
+    # )
+    # axarr[3].fill_between(
+    #     plot_time3,
+    #     [
+    #         np.average(FH_data["FH_matrix_element"])
+    #         - np.std(FH_data["FH_matrix_element"])
+    #     ]
+    #     * len(plot_time3),
+    #     [
+    #         np.average(FH_data["FH_matrix_element"])
+    #         + np.std(FH_data["FH_matrix_element"])
+    #     ]
+    #     * len(plot_time3),
+    #     alpha=0.3,
+    #     linewidth=0,
+    #     color=_colors[6],
+    # )
+
+    axarr[3].set_xlabel(r"$t$", labelpad=14, fontsize=18)
     axarr[3].set_title(r"\textrm{FH}")
-    axarr[3].set_xlim(0, 20)
-    axarr[3].set_ylim(0.4, 1.0)
+    axarr[3].set_xlim(-1, 15)
+    axarr[3].set_ylim(0.4, 1.1)
+    axarr[3].set_xticks([0, 5, 10])
+    axarr[0].set_xticks([-5, 0, 5])
+    axarr[1].set_xticks([-5, 0, 5])
+    axarr[2].set_xticks([-5, 0, 5])
 
     savefile = plotdir / Path(f"{title}.pdf")
     savefile2 = plotdir / Path(f"{title}.png")
@@ -335,6 +363,282 @@ def plot_ratio_fit_comp_paper(
     plt.savefig(savefile)
     # plt.savefig(savefile2, dpi=500)
     plt.savefig(savefile3, dpi=100)
+    # plt.ylim(1.104, 1.181)
+    # plt.savefig(savefile_ylim)
+    # plt.show()
+    plt.close()
+    return
+
+
+def plot_ratio_fit_comp_paper_separate(
+    ratios,
+    ratio_fit,
+    delta_t,
+    src_snk_times,
+    redchisq,
+    fit_param_boot,
+    plotdir,
+    plotparam,
+    FH_data,
+    title="",
+):
+    time = np.arange(64)
+    labels = [
+        r"$t=10$",
+        r"$t=13$",
+        r"$t=16$",
+    ]
+
+    # Fit a constant to the ratios
+    t10_ratio_data = ratios[0][:, delta_t:-delta_t]
+    t10_const_fit = np.average(t10_ratio_data, axis=1)
+
+    t13_ratio_data = ratios[1][:, delta_t:-delta_t]
+    fitparam_t13 = stats.fit_bootstrap(
+        fitfunc.constant,
+        [1],
+        np.arange(len(t13_ratio_data[0])),
+        t13_ratio_data,
+        bounds=None,
+        time=False,
+        fullcov=False,
+    )
+    t13_const_fit = fitparam_t13["param"]
+    print(f"{np.average(t13_const_fit)=}")
+
+    t16_ratio_data = ratios[2][:, delta_t:-delta_t]
+    print(f"\n{np.shape(t16_ratio_data)=}\n")
+    print(f"\n{np.average(t16_ratio_data, axis=0)=}\n")
+    fitparam_t16 = stats.fit_bootstrap(
+        fitfunc.constant,
+        np.array([1]),
+        np.arange(len(t16_ratio_data[0])),
+        t16_ratio_data,
+        bounds=None,
+        time=False,
+    )
+    t16_const_fit = fitparam_t16["param"]
+    print(f"{np.average(t16_const_fit)=}")
+
+    # f, axarr = plt.subplots(1, 3, sharex=True, sharey=True, figsize=(11, 5))
+    # f, axarr = plt.subplots(1, 4, sharex=True, sharey=True, figsize=(8, 5))
+    f, axarr = plt.subplots(1, 4, sharex=False, sharey=True, figsize=(8, 5))
+    f.subplots_adjust(wspace=0, bottom=0.2)
+    for icorr, corr in enumerate(ratios):
+        plot_time2 = time - (src_snk_times[icorr]) / 2
+        ydata = np.average(corr, axis=0)
+        yerror = np.std(corr, axis=0)
+        plot_x_values = (
+            np.arange(src_snk_times[icorr] + 1)[delta_t:-delta_t]
+            - (src_snk_times[icorr]) / 2
+        )
+        tau_values = np.arange(src_snk_times[icorr] + 1)[delta_t:-delta_t]
+        t_values = np.array([src_snk_times[icorr]] * len(tau_values))
+
+        step_indices = [
+            0,
+            src_snk_times[0] + 1 - (2 * delta_t),
+            src_snk_times[0] + 1 + src_snk_times[1] + 1 - (4 * delta_t),
+            src_snk_times[0]
+            + 1
+            + src_snk_times[1]
+            + 1
+            + src_snk_times[2]
+            + 1
+            - (6 * delta_t),
+        ]
+
+        axarr[icorr].errorbar(
+            plot_time2[1 : src_snk_times[icorr]],
+            ydata[1 : src_snk_times[icorr]],
+            yerror[1 : src_snk_times[icorr]],
+            capsize=4,
+            elinewidth=1,
+            color=_colors[icorr],
+            fmt=_fmts[icorr],
+            # label=labels[icorr],
+        )
+        axarr[icorr].plot(
+            plot_x_values,
+            np.average(
+                ratio_fit[:, step_indices[icorr] : step_indices[icorr + 1]], axis=0
+            ),
+            color=_colors[3],
+        )
+        axarr[icorr].fill_between(
+            plot_x_values,
+            np.average(
+                ratio_fit[:, step_indices[icorr] : step_indices[icorr + 1]], axis=0
+            )
+            - np.std(
+                ratio_fit[:, step_indices[icorr] : step_indices[icorr + 1]], axis=0
+            ),
+            np.average(
+                ratio_fit[:, step_indices[icorr] : step_indices[icorr + 1]], axis=0
+            )
+            + np.std(
+                ratio_fit[:, step_indices[icorr] : step_indices[icorr + 1]], axis=0
+            ),
+            alpha=0.3,
+            linewidth=0,
+            color=_colors[3],
+        )
+        axarr[icorr].axhline(
+            np.average(fit_param_boot[:, 0]),
+            color=_colors[5],
+            # label=rf"fit = {err_brackets(np.average(fit_param_boot[:, 0]), np.std(fit_param_boot[:, 0]))}",
+        )
+
+        plot_time3 = np.array([-20, 20])
+        axarr[icorr].fill_between(
+            plot_time3,
+            [np.average(fit_param_boot[:, 0]) - np.std(fit_param_boot[:, 0])]
+            * len(plot_time3),
+            [np.average(fit_param_boot[:, 0]) + np.std(fit_param_boot[:, 0])]
+            * len(plot_time3),
+            alpha=0.3,
+            linewidth=0,
+            color=_colors[5],
+        )
+
+        axarr[icorr].set_title(labels[icorr])
+        axarr[icorr].set_xlabel(r"$\tau-t/2$", labelpad=14, fontsize=18)
+        axarr[icorr].set_ylabel(r"$R(\vec{p}\, ; t, \tau)$", labelpad=5, fontsize=18)
+        axarr[icorr].label_outer()
+        # axarr[icorr].set_xlim(plot_time2[0] - 0.5, plot_time2[src_snk_times[-1]] + 0.5)
+        axarr[icorr].set_xlim(-10, 10)
+
+    # Plot the fit results on the second subplot
+    axarr[3].set_yticks([])
+    axarr[3].errorbar(
+        0,
+        np.average(t10_const_fit),
+        np.std(t10_const_fit),
+        capsize=4,
+        elinewidth=1,
+        color=_colors[0],
+        fmt=_fmts[0],
+    )
+    axarr[3].errorbar(
+        1,
+        np.average(t13_const_fit),
+        np.std(t13_const_fit),
+        capsize=4,
+        elinewidth=1,
+        color=_colors[1],
+        fmt=_fmts[1],
+    )
+    axarr[3].errorbar(
+        2,
+        np.average(t16_const_fit),
+        np.std(t16_const_fit),
+        capsize=4,
+        elinewidth=1,
+        color=_colors[2],
+        fmt=_fmts[2],
+    )
+    axarr[3].errorbar(
+        3,
+        np.average(fit_param_boot[:, 0]),
+        np.std(fit_param_boot[:, 0]),
+        capsize=4,
+        elinewidth=1,
+        color=_colors[4],
+        fmt=_fmts[4],
+    )
+    axarr[3].errorbar(
+        4,
+        np.average(FH_data["deltaE_fit"]),
+        np.std(FH_data["deltaE_fit"]),
+        capsize=4,
+        elinewidth=1,
+        color=_colors[3],
+        fmt=_fmts[3],
+    )
+    axarr[3].set_xticks(
+        [0, 1, 2, 3, 4],
+    )
+    axarr[3].set_xticklabels(
+        [labels[0], labels[1], labels[2], r"2-exp", r"FH"],
+        fontsize="x-small",
+        rotation=45,
+        ha="right",
+        rotation_mode="anchor",
+    )
+    axarr[3].tick_params(axis="x", which="minor", length=0)
+    axarr[3].set_xlim(-0.8, 4.8)
+    axarr[3].set_ylim(0.6, 0.9)
+
+    # efftime = np.arange(63)
+    # axarr[3].errorbar(
+    #     efftime[:20],
+    #     np.average(FH_data["deltaE_eff"], axis=0)[:20],
+    #     np.std(FH_data["deltaE_eff"], axis=0)[:20],
+    #     capsize=4,
+    #     elinewidth=1,
+    #     color=_colors[3],
+    #     fmt=_fmts[3],
+    #     # label=labels[icorr],
+    # )
+    # axarr[3].plot(
+    #     # FH_data["ratio_t_range"],
+    #     plot_time3,
+    #     [np.average(FH_data["deltaE_fit"])]
+    #     * len(plot_time3),  # * len(FH_data["ratio_t_range"]),
+    #     color=_colors[3],
+    # )
+    # axarr[3].fill_between(
+    #     # FH_data["ratio_t_range"],
+    #     plot_time3,
+    #     [np.average(FH_data["deltaE_fit"]) - np.std(FH_data["deltaE_fit"])]
+    #     * len(plot_time3),
+    #     # * len(FH_data["ratio_t_range"]),
+    #     [np.average(FH_data["deltaE_fit"]) + np.std(FH_data["deltaE_fit"])]
+    #     * len(plot_time3),
+    #     # * len(FH_data["ratio_t_range"]),
+    #     alpha=0.3,
+    #     linewidth=0,
+    #     color=_colors[7],
+    # )
+
+    # axarr[3].axhline(
+    #     np.average(FH_data["FH_matrix_element"]),
+    #     color=_colors[6],
+    # )
+    # axarr[3].fill_between(
+    #     plot_time3,
+    #     [
+    #         np.average(FH_data["FH_matrix_element"])
+    #         - np.std(FH_data["FH_matrix_element"])
+    #     ]
+    #     * len(plot_time3),
+    #     [
+    #         np.average(FH_data["FH_matrix_element"])
+    #         + np.std(FH_data["FH_matrix_element"])
+    #     ]
+    #     * len(plot_time3),
+    #     alpha=0.3,
+    #     linewidth=0,
+    #     color=_colors[6],
+    # )
+
+    # axarr[3].set_xlabel(r"$t$", labelpad=14, fontsize=18)
+    # axarr[3].set_title(r"\textrm{FH}")
+    # axarr[3].set_xlim(-1, 15)
+    # axarr[3].set_ylim(0.4, 1.1)
+    # axarr[3].set_xticks([0, 5, 10])
+
+    axarr[0].set_xticks([-5, 0, 5])
+    axarr[1].set_xticks([-5, 0, 5])
+    axarr[2].set_xticks([-5, 0, 5])
+
+    savefile = plotdir / Path(f"{title}_separate.pdf")
+    savefile2 = plotdir / Path(f"{title}.png")
+    savefile3 = plotdir / Path(f"{title}_small.png")
+    savefile.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(savefile)
+    # plt.savefig(savefile2, dpi=500)
+    # plt.savefig(savefile3, dpi=100)
     # plt.ylim(1.104, 1.181)
     # plt.savefig(savefile_ylim)
     # plt.show()
@@ -732,6 +1036,7 @@ def plot_ratio_fit_comp_paper_3(
         fmt=_fmts[3],
         label=r"$\textrm{FH}$",
     )
+
     # axarr.axhline(
     #     np.average(FH_data["deltaE_fit"]),
     #     color=_colors[7],
@@ -750,27 +1055,46 @@ def plot_ratio_fit_comp_paper_3(
     # plot the fit to the  Feynman-Hellmann data
     axarr[0].plot(
         FH_data["ratio_t_range"][:-2] + offset * 3,
-        [np.average(FH_data["FH_matrix_element"])] * len(FH_data["ratio_t_range"][:-2]),
+        [np.average(FH_data["deltaE_fit"])] * len(FH_data["ratio_t_range"][:-2]),
         color=_colors[3],
     )
     axarr[0].fill_between(
         FH_data["ratio_t_range"][:-2] + offset * 3,
-        # [FH_data["FH_matrix_element"] - FH_data["FH_matrix_element_err"]]
-        [
-            np.average(FH_data["FH_matrix_element"])
-            - np.std(FH_data["FH_matrix_element"])
-        ]
+        # [FH_data["deltaE_fit"] - FH_data["deltaE_fit_err"]]
+        [np.average(FH_data["deltaE_fit"]) - np.std(FH_data["deltaE_fit"])]
         * len(FH_data["ratio_t_range"][:-2]),
-        [
-            np.average(FH_data["FH_matrix_element"])
-            + np.std(FH_data["FH_matrix_element"])
-        ]
-        # [FH_data["FH_matrix_element"] + FH_data["FH_matrix_element_err"]]
+        [np.average(FH_data["deltaE_fit"]) + np.std(FH_data["deltaE_fit"])]
+        # [FH_data["deltaE_fit"] + FH_data["deltaE_fit_err"]]
         * len(FH_data["ratio_t_range"][:-2]),
         alpha=0.3,
         linewidth=0,
         color=_colors[3],
     )
+
+    # # plot the fit to the  Feynman-Hellmann data
+    # axarr[0].plot(
+    #     FH_data["ratio_t_range"][:-2] + offset * 3,
+    #     [np.average(FH_data["FH_matrix_element"])] * len(FH_data["ratio_t_range"][:-2]),
+    #     color=_colors[3],
+    # )
+    # axarr[0].fill_between(
+    #     FH_data["ratio_t_range"][:-2] + offset * 3,
+    #     # [FH_data["FH_matrix_element"] - FH_data["FH_matrix_element_err"]]
+    #     [
+    #         np.average(FH_data["FH_matrix_element"])
+    #         - np.std(FH_data["FH_matrix_element"])
+    #     ]
+    #     * len(FH_data["ratio_t_range"][:-2]),
+    #     [
+    #         np.average(FH_data["FH_matrix_element"])
+    #         + np.std(FH_data["FH_matrix_element"])
+    #     ]
+    #     # [FH_data["FH_matrix_element"] + FH_data["FH_matrix_element_err"]]
+    #     * len(FH_data["ratio_t_range"][:-2]),
+    #     alpha=0.3,
+    #     linewidth=0,
+    #     color=_colors[3],
+    # )
 
     axarr[0].set_xlim(0, 16)
     axarr[0].set_ylim(0.2, 1.1)
@@ -821,13 +1145,22 @@ def plot_ratio_fit_comp_paper_3(
     )
     axarr[1].errorbar(
         4,
-        np.average(FH_data["FH_matrix_element"]),
-        np.std(FH_data["FH_matrix_element"]),
+        np.average(FH_data["deltaE_fit"]),
+        np.std(FH_data["deltaE_fit"]),
         capsize=4,
         elinewidth=1,
         color=_colors[3],
         fmt=_fmts[3],
     )
+    # axarr[1].errorbar(
+    #     4,
+    #     np.average(FH_data["FH_matrix_element"]),
+    #     np.std(FH_data["FH_matrix_element"]),
+    #     capsize=4,
+    #     elinewidth=1,
+    #     color=_colors[3],
+    #     fmt=_fmts[3],
+    # )
     axarr[1].set_xticks(
         [0, 1, 2, 3, 4],
     )
@@ -1073,13 +1406,22 @@ def plot_ratio_fit_comp_paper_4(
     )
     axarr[1].errorbar(
         4,
-        np.average(FH_data["FH_matrix_element"]),
-        np.std(FH_data["FH_matrix_element"]),
+        np.average(FH_data["deltaE_fit"]),
+        np.std(FH_data["deltaE_fit"]),
         capsize=4,
         elinewidth=1,
         color=_colors[3],
         fmt=_fmts[3],
     )
+    # axarr[1].errorbar(
+    #     4,
+    #     np.average(FH_data["FH_matrix_element"]),
+    #     np.std(FH_data["FH_matrix_element"]),
+    #     capsize=4,
+    #     elinewidth=1,
+    #     color=_colors[3],
+    #     fmt=_fmts[3],
+    # )
     axarr[1].set_xticks(
         [0, 1, 2, 3, 4],
     )
@@ -1093,8 +1435,8 @@ def plot_ratio_fit_comp_paper_4(
     axarr[1].tick_params(axis="x", which="minor", length=0)
     axarr[1].set_xlim(-0.8, 4.8)
 
-    axarr[0].set_ylim(0.63, 0.9)
-    axarr[1].set_ylim(0.63, 0.9)
+    axarr[0].set_ylim(0.6, 0.9)
+    axarr[1].set_ylim(0.6, 0.9)
 
     savefile = plotdir / Path(f"{title}_three.pdf")
     savefile2 = plotdir / Path(f"{title}.png")
@@ -1163,9 +1505,9 @@ def main():
     delta_t_list = [5]
     tmin_choice = [7]
 
-    # ======================================================================
-    # Calculate the Q^2 values for each of the n2sig and sig2n transitions and momenta
-    # Then save these to a file.
+    # # ======================================================================
+    # # Calculate the Q^2 values for each of the n2sig and sig2n transitions and momenta
+    # # Then save these to a file.
     # Qsquared_values_sig2n, Qsquared_values_n2sig = get_Qsquared_values(
     #     datadir, tmin_choice, tmin_choice
     # )
@@ -1216,13 +1558,21 @@ def main():
 
     with open(
         Path.home()
-        / Path("Documents/PhD/analysis_results/sig2n/data/form_factor_combination.pkl"),
+        # / Path("Documents/PhD/analysis_results/sig2n/data/form_factor_combination.pkl"),
+        / Path(
+            # "Documents/PhD/analysis_results/hyperon_ff/data/form_factor_combination.pkl"
+            "Documents/PhD/analysis_results/hyperon_ff/data/matrix_element_paper.pkl"
+        ),
         "rb",
     ) as file_in:
         [feynhell_points, threeptfn_points] = pickle.load(file_in)
 
-    normalisation = 0.863
-    FH_matrix_element = feynhell_points["ydata"][4, :] / normalisation
+    # We want the unrenormalised FH result for the matrix element <||>, so we divide out the normalisation.
+    # This is to compare with the 3point fn results.
+    # normalisation = 0.863
+    # FH_matrix_element = feynhell_points["ydata"][4, :] / normalisation
+    FH_matrix_element = feynhell_points["ydata"][4, :]
+    print(f"\n\n\n\n\n{np.shape(FH_matrix_element)=}")
 
     double_ratio3 = ratio32 / ratio3
     deltaE_eff_double = stats.bs_effmass(double_ratio3) / (2 * (lambdas2 - lambdas))
@@ -1231,8 +1581,28 @@ def main():
         "deltaE_fit": deltaE_fit,
         "ratio_t_range": ratio_t_range,
         "FH_matrix_element": FH_matrix_element,
-        # "FH_matrix_element_err": FH_matrix_element_err,
+        # "FH_matrix_element_err": np.std(FH_matrix_element),
     }
+
+    # ========================================================================
+    # --- Get the energies of the nucleon and sigma for the FH calculation ---
+    (
+        nucl_fits,
+        sigma_fits,
+        nucl_energies,
+        sigma_energies,
+    ) = get_energies()
+    # # --- Multiply matrix element with the energy factor ---
+    # # energy_factor = np.sqrt(
+    # #     2 * nucl_energies[4] / (nucl_energies[4] + nucl_energies[0])
+    # # )
+    # energy_factor = np.sqrt(4 * nucl_energies[4] * sigma_energies[0])
+    energy_factor = 1 / np.sqrt(4 * nucl_energies[4] * sigma_energies[0])
+    # # energy_factor = np.sqrt(
+    # #     2 * nucl_energies[4] / (nucl_energies[4] + nucl_energies[0])
+    # # ) / np.sqrt(4 * nucl_energies[4] * sigma_energies[0])
+    # FH_data["deltaE_eff"] = np.einsum("ij,i->ij", FH_data["deltaE_eff"], energy_factor)
+    FH_data["FH_matrix_element"] = FH_data["FH_matrix_element"] * energy_factor
 
     plot_3point_FH_comp_n2sig(
         latticedir,
@@ -1376,6 +1746,62 @@ def plot_3point_FH_comp_n2sig(
                         best_fit_s,
                     ) = fit_params_ratio
 
+                    # # # ======================================================================
+                    # # Multiply the ratio with energy factors such that it shows the approximate
+                    # # value of the matrix element.
+                    # # Read the fits to the 2pt functions
+                    # energies_nucl = []
+                    # energies_sigma = []
+
+                    # datafile_ = datadir / Path(f"p+0+0+0_zeromom_2pt_fit_choice.pkl")
+                    # with open(datafile_, "rb") as file_in:
+                    #     fit_params_n, fit_params_s = pickle.load(file_in)
+                    # energies_sigma.append(fit_params_s[:, 1])
+                    # energies_nucl.append(fit_params_n[:, 1])
+
+                    # transitions = ["sig2n", "n2sig"]
+                    # momenta = ["p+1+0+0", "p+1+1+0"]
+                    # for itrans, trans in enumerate(transitions):
+                    #     for jmom, mom_ in enumerate(momenta):
+                    #         datafile_ = datadir / Path(
+                    #             f"{mom_}_{trans}_2pt_fit_choice.pkl"
+                    #         )
+                    #         with open(datafile_, "rb") as file_in:
+                    #             fit_params_n, fit_params_s = pickle.load(file_in)
+                    #         if itrans == 0:
+                    #             energies_sigma.append(fit_params_s[:, 1])
+                    #         elif itrans == 1:
+                    #             energies_nucl.append(fit_params_n[:, 1])
+
+                    # # ===============================================================
+                    # # Multiply with energy factors
+                    # # np.average(fit_param_ratio_boot[:, 0])
+                    # energyfactor_ratio = np.sqrt(
+                    #     4 * energies_nucl[1] * energies_sigma[0]
+                    # )
+                    # fit_param_ratio_boot[:, 0] = (
+                    #     fit_param_ratio_boot[:, 0] * energyfactor_ratio
+                    # )
+
+                    # full_ratio_list_reim = [
+                    #     [
+                    #         np.einsum(
+                    #             "ij,i->ij", ratio_full_t10[:, :, 0], energyfactor_ratio
+                    #         ),
+                    #         np.einsum(
+                    #             "ij,i->ij", ratio_full_t13[:, :, 0], energyfactor_ratio
+                    #         ),
+                    #         np.einsum(
+                    #             "ij,i->ij", ratio_full_t16[:, :, 0], energyfactor_ratio
+                    #         ),
+                    #     ],
+                    #     [
+                    #         ratio_full_t10[:, :, 1],
+                    #         ratio_full_t13[:, :, 1],
+                    #         ratio_full_t16[:, :, 1],
+                    #     ],
+                    # ]
+
                     # # ======================================================================
                     # # Plot the results of the fit to the ratio
                     # # plot_ratio_fit(
@@ -1390,18 +1816,30 @@ def plot_3point_FH_comp_n2sig(
                     # #     title=f"{mom}/{pol}/ratio_fit_{reim}_{operator}_n2sig",
                     # # )
                     # print("here")
-                    # plot_ratio_fit_comp_paper(
-                    #     full_ratio_list_reim[ir],
-                    #     ratio_fit_boot,
-                    #     delta_t_list[imom],
-                    #     src_snk_times,
-                    #     redchisq_ratio,
-                    #     fit_param_ratio_boot,
-                    #     plotdir,
-                    #     [mom, operators_tex[iop], pol, reim],
-                    #     FH_data,
-                    #     title=f"{mom}/{pol}/ratio_comp_fit_{reim}_{operator}_{mom}_n2sig_paper",
-                    # )
+                    plot_ratio_fit_comp_paper(
+                        full_ratio_list_reim[ir],
+                        ratio_fit_boot,
+                        delta_t_list[imom],
+                        src_snk_times,
+                        redchisq_ratio,
+                        fit_param_ratio_boot,
+                        plotdir,
+                        [mom, operators_tex[iop], pol, reim],
+                        FH_data,
+                        title=f"{mom}/{pol}/ratio_comp_fit_{reim}_{operator}_{mom}_n2sig_paper",
+                    )
+                    plot_ratio_fit_comp_paper_separate(
+                        full_ratio_list_reim[ir],
+                        ratio_fit_boot,
+                        delta_t_list[imom],
+                        src_snk_times,
+                        redchisq_ratio,
+                        fit_param_ratio_boot,
+                        plotdir,
+                        [mom, operators_tex[iop], pol, reim],
+                        FH_data,
+                        title=f"{mom}/{pol}/ratio_comp_fit_{reim}_{operator}_{mom}_n2sig_paper",
+                    )
 
                     # # ========================================================================
                     # # --- Get the energies of the nucleon and sigma for the FH calculation ---

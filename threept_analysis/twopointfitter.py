@@ -48,14 +48,16 @@ def fit_2ptfn_2exp(latticedir, plotdir, datadir, rel="rel"):
     fitfunction = fitfunc.initffncs("Twoexp_log")
     time_limits = [
         # [[1, 12], [26, 26]],
-        [[1, 12], [20, 20]],
+        [[1, 12], [22, 22]],
         [[1, 9], [20, 20]],
-        [[1, 8], [19, 19]],
+        [[1, 8], [17, 17]],
     ]
 
     for ikappa, kappa in enumerate(kappa_combs):
         print(f"\n{kappa}")
         for imom, mom in enumerate(momenta):
+            # if imom < 2:
+            #     continue
             print(f"\n{mom}")
             twopointfn_filename = latticedir / Path(
                 f"mass_spectrum/baryon_qcdsf/barspec/32x64/unpreconditioned_slrc/{kappa}/sh_gij_p21_90-sh_gij_p21_90/{mom}/barspec_nucleon_{rel}_500cfgs.pickle"
@@ -72,7 +74,7 @@ def fit_2ptfn_2exp(latticedir, plotdir, datadir, rel="rel"):
                 disp=True,
                 time=False,
                 weights_=True,
-                timeslice=17,
+                timeslice=14,
             )
 
             datafile = datadir / Path(f"{kappa}_{mom}_{rel}_fitlist_2pt_2exp.pkl")
@@ -903,11 +905,13 @@ def main():
     # ======================================================================
     # Read the two-point functions and fit a two-exponential function to it
 
-    # fit_2ptfn_2exp(latticedir, plotdir, datadir, rel="nr")
+    fit_2ptfn_2exp(latticedir, plotdir, datadir, rel="nr")
     # fit_2ptfn_3exp(latticedir, plotdir, datadir, rel="nr")
 
+    print("\nFitting done")
+
     read_2pt_fits_2exp(latticedir, plotdir, datadir, momenta, "nr", tmin_choice)
-    read_2pt_fits_3exp(latticedir, plotdir, datadir, momenta, "nr", tmin_choice)
+    # read_2pt_fits_3exp(latticedir, plotdir, datadir, momenta, "nr", tmin_choice)
 
 
 if __name__ == "__main__":
